@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { Icon } from '@/components/Icon';
+import { ShapePicker } from '@/components/ShapePicker';
 import { Thumb } from '@/components/Thumb';
 import { Button, Chip, Sheet } from '@/components/ui';
-import type { AlbumPage, Focal, Photo, ThemeId } from '@/domain/types';
+import type { AlbumPage, BookFormat, Focal, Photo, ThemeId } from '@/domain/types';
 import { getLayout, layoutsFor } from '@/layouts/layouts';
 import type { LayoutDef } from '@/layouts/schema';
 import { THEMES, getTheme } from '@/layouts/themes';
@@ -12,7 +13,7 @@ import { coverCrop, focalFor, innerRect } from '@/render/geometry';
 import { usePhotoUrl } from '@/storage/urls';
 
 /** Pick a layout; previews use the page's own photos. */
-export function LayoutSheet({ open, onClose, page, themeId, photos, onPick, mode }: {
+export function LayoutSheet({ open, onClose, page, themeId, photos, onPick, mode, format = 'portrait' }: {
   open: boolean;
   onClose: () => void;
   page: AlbumPage | null;
@@ -20,15 +21,16 @@ export function LayoutSheet({ open, onClose, page, themeId, photos, onPick, mode
   photos: Map<string, Photo>;
   onPick: (layoutId: string) => void;
   mode: 'change' | 'add';
+  format?: BookFormat;
 }) {
   const theme = getTheme(themeId);
   const currentKind = page ? getLayout(page.layoutId).kind : 'photos';
   const [kind, setKind] = useState<LayoutDef['kind']>(mode === 'add' ? 'photos' : currentKind);
   const count = page?.photos.length ?? 0;
   const list = useMemo(() => {
-    const all = layoutsFor(themeId, kind);
+    const all = layoutsFor(themeId, kind, undefined, format);
     return [...all].sort((a, b) => Math.abs(a.photos.length - count) - Math.abs(b.photos.length - count) || a.photos.length - b.photos.length);
-  }, [themeId, kind, count]);
+  }, [themeId, kind, count, format]);
   const demo = (l: LayoutDef): AlbumPage => ({
     id: `demo-${l.id}`,
     layoutId: l.id,
@@ -46,9 +48,14 @@ export function LayoutSheet({ open, onClose, page, themeId, photos, onPick, mode
       </div>
       <div className="grid grid-cols-3 gap-3 pb-4 sm:grid-cols-4 md:grid-cols-5">
         {list.map((l) => (
-          <button key={l.id} type="button" onClick={() => (onPick(l.id), onClose())} className={`rounded-xl p-1.5 text-left transition hover:bg-cream ${page?.layoutId === l.id && mode === 'change' ? 'ring-2 ring-pop' : ''}`}>
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => (onPick(l.id), onClose())}
+            className={`rounded-xl p-1.5 text-left transition hover:bg-cream ${l.spread ? 'col-span-2' : ''} ${page?.layoutId === l.id && mode === 'change' ? 'ring-2 ring-pop' : ''}`}
+          >
             <div className="overflow-hidden rounded-sm shadow-soft">
-              <PageView page={demo(l)} theme={theme} photos={photos} variant="thumb" showEmpty />
+              <PageView page={demo(l)} theme={theme} photos={photos} variant="thumb" showEmpty format={format} />
             </div>
             <p className="mt-1.5 truncate text-xs">{l.name}</p>
             <p className="text-[11px] text-muted">
@@ -193,9 +200,24 @@ export function CropSheet({ open, onClose, page, slot, themeId, photo, onSave }:
   );
 }
 
-export function ThemeSheet({ open, onClose, current, onPick }: { open: boolean; onClose: () => void; current: ThemeId; onPick: (id: ThemeId) => void }) {
+export function ThemeSheet({ open, onClose, current, onPick, format, onFormat }: {
+  open: boolean;
+  onClose: () => void;
+  current: ThemeId;
+  onPick: (id: ThemeId) => void;
+  format?: BookFormat;
+  onFormat?: (f: BookFormat) => void;
+}) {
   return (
     <Sheet open={open} onClose={onClose} title="Album style">
+      {format && onFormat && (
+        <div className="pb-4">
+          <p className="mb-2 text-sm font-medium">Book shape</p>
+          <ShapePicker value={format} onChange={(f) => f !== format && (onFormat(f), onClose())} />
+          <p className="mt-2 text-xs text-muted">Changing the shape redesigns the pages with the same photos. You can undo it.</p>
+        </div>
+      )}
+      <p className="mb-2 text-sm font-medium">Style</p>
       <div className="grid gap-2 pb-3">
         {THEMES.map((t) => (
           <button

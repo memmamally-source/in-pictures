@@ -1,4 +1,3 @@
-import { PAGE_H, PAGE_W } from '@/layouts/schema';
 
 import type { ResolvedPart, Scene, Xform } from './scene';
 import { cssFont } from './text';
@@ -53,19 +52,19 @@ function drawParts(ctx: CanvasRenderingContext2D, parts: ResolvedPart[]) {
 function boundsOf(d: string): { y0: number; y1: number } {
   const m = /^M([\d.-]+) ([\d.-]+)h[\d.-]+v([\d.-]+)/.exec(d);
   if (m) return { y0: Number(m[2]), y1: Number(m[2]) + Number(m[3]) };
-  return { y0: 0, y1: PAGE_H };
+  return { y0: 0, y1: 1000 };
 }
 
 /** `bleed` (page units) adds that much paper on every side, for print. Build the scene with the same bleed. */
 export async function renderScene(scene: Scene, pxPerUnit: number, load: ImageLoader, bleed = 0): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round((PAGE_W + 2 * bleed) * pxPerUnit);
-  canvas.height = Math.round((PAGE_H + 2 * bleed) * pxPerUnit);
+  canvas.width = Math.round((scene.width + 2 * bleed) * pxPerUnit);
+  canvas.height = Math.round((scene.height + 2 * bleed) * pxPerUnit);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unavailable');
   ctx.scale(pxPerUnit, pxPerUnit);
   ctx.fillStyle = scene.background;
-  ctx.fillRect(0, 0, PAGE_W + 2 * bleed, PAGE_H + 2 * bleed);
+  ctx.fillRect(0, 0, scene.width + 2 * bleed, scene.height + 2 * bleed);
   ctx.translate(bleed, bleed);
   ctx.imageSmoothingQuality = 'high';
 

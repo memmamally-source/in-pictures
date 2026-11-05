@@ -47,6 +47,16 @@ export interface ThemeDef {
   pageDecor: DecorItem[][];
   /** Moods that point to this theme. */
   moods: Mood[];
+  /** Professional style: uses only the generated photo-book layouts. */
+  pro?: boolean;
+  /** Covers: 'poster' = big title + illustration, no photo. */
+  coverStyle?: 'photo' | 'poster';
+  /** Poster cover colours, picked per album. */
+  coverColors?: string[];
+  /** How strongly the generator favours two-page spreads (0 = never). */
+  spreadBias?: number;
+  /** Shape suggested with this style. */
+  defaultFormat?: 'portrait' | 'landscape' | 'square';
 }
 
 /** Which font each text role uses. */
@@ -67,8 +77,63 @@ const FRAUNCES = 'Fraunces Variable';
 const SANS = 'Inter Variable';
 const PLAYFAIR = 'Playfair Display';
 const TYPE = 'Special Elite';
+const POSTER = 'Anton';
+const SCRIPT = 'Great Vibes';
 
 export const THEMES: ThemeDef[] = [
+  {
+    id: 'gallery',
+    name: 'Gallery',
+    description: 'A professional photo book: edge-to-edge photos, hairline gaps, panoramic spreads and quiet type. The photos do the talking.',
+    colors: { page: '#FFFFFF', chapterPage: '#FFFFFF', ink: '#1A1A1A', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#1A1A1A', mat: '#FFFFFF', pattern: '#EEEEEE' },
+    fonts: {
+      title: { family: SCRIPT, weight: 400, lineHeight: 1.05, scale: 1.25 },
+      heading: { family: SERIF, weight: 500, lineHeight: 1.1 },
+      body: { family: SERIF, weight: 500, lineHeight: 1.35, scale: 1.1 },
+      caption: { family: SANS, weight: 400, lineHeight: 1.4, scale: 0.82 },
+      label: { family: SANS, weight: 500, upper: true, tracking: 0.28, lineHeight: 1.2, scale: 0.85 },
+    },
+    background: 'plain',
+    chapterBackground: 'plain',
+    frame: 'none',
+    shape: 'rect',
+    radius: 0,
+    tilt: 0,
+    shadow: false,
+    pageDecor: [[]],
+    moods: ['elegant', 'calm', 'romantic'],
+    pro: true,
+    coverStyle: 'photo',
+    spreadBias: 1.6,
+    defaultFormat: 'landscape',
+  },
+  {
+    id: 'graphic',
+    name: 'Bold Graphic',
+    description: 'A design-shop book: a colour-block cover with a giant title and an illustration, then clean, confident photo pages.',
+    colors: { page: '#FFFFFF', chapterPage: '#F7D046', ink: '#1E1B18', muted: '#55504A', accent: '#C2412D', accent2: '#1F6F6B', mat: '#FFFFFF', pattern: '#EEEEEE' },
+    fonts: {
+      title: { family: POSTER, weight: 400, upper: true, tracking: 0.01, lineHeight: 0.95, scale: 1 },
+      heading: { family: POSTER, weight: 400, upper: true, tracking: 0.02, lineHeight: 0.98 },
+      body: { family: SANS, weight: 400, lineHeight: 1.45, scale: 0.9 },
+      caption: { family: SANS, weight: 400, lineHeight: 1.4, scale: 0.82 },
+      label: { family: POSTER, weight: 400, upper: true, tracking: 0.08, lineHeight: 1.1, scale: 1 },
+    },
+    background: 'plain',
+    chapterBackground: 'plain',
+    frame: 'none',
+    shape: 'rect',
+    radius: 0,
+    tilt: 0,
+    shadow: false,
+    pageDecor: [[]],
+    moods: ['playful', 'adventurous', 'joyful'],
+    pro: true,
+    coverStyle: 'poster',
+    coverColors: ['#2FA39A', '#F7D046', '#F29BB8', '#F4B183', '#9BC8E8', '#C9DE7A'],
+    spreadBias: 1,
+    defaultFormat: 'portrait',
+  },
   {
     id: 'minimal',
     name: 'Minimal Editorial',

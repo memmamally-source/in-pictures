@@ -1,5 +1,6 @@
 import type { Album, AlbumPage, Focal, Photo, ThemeId } from '@/domain/types';
 import { getLayout, layoutsFor } from '@/layouts/layouts';
+import { getTheme } from '@/layouts/themes';
 import { mulberry32 } from '@/render/decor';
 
 import { assign, rankLayouts } from './generate';
@@ -121,11 +122,12 @@ export function shufflePage(album: Album, index: number, photos: Photo[], themeI
   const group = page.photos.map((s) => (s.photoId ? byId.get(s.photoId) : undefined)).filter((p): p is Photo => !!p);
   if (group.length !== page.photos.length) {
     // Has empty frames: cycle through layouts of the same size.
-    const same = layoutsFor(themeId, layout.kind, layout.photos.length);
+    const same = layoutsFor(themeId, layout.kind, layout.photos.length, album.format).filter((l) => !!l.spread === !!layout.spread);
     const next = same[(same.findIndex((l) => l.id === layout.id) + 1) % same.length];
     return touch(album, index, (p) => ({ ...p, layoutId: next.id }));
   }
-  const ranked = rankLayouts(layout.kind, group, { themeId, density: 2.5, rand: mulberry32(1) });
+  // Stay a single page or a spread, so the pages around it don't shift sides.
+  const ranked = rankLayouts(layout.kind, group, { themeId, density: 2.5, rand: mulberry32(1), format: album.format }).filter((c) => !!c.layout.spread === !!layout.spread);
   if (ranked.length < 2) return album;
   const at = ranked.findIndex((c) => c.layout.id === layout.id);
   const next = ranked[(at + 1) % ranked.length];
@@ -136,14 +138,25 @@ export function shufflePage(album: Album, index: number, photos: Photo[], themeI
  * Applies a new theme: every page keeps its photos and text and moves to the
  * closest layout the theme offers (same kind and photo count, best fit).
  */
-export function applyTheme(album: Album, themeId: ThemeId, photos: Photo[]): Album {
+export function applyTheme(album: Album, themeId: ThemeId, photos: Photo[], extra: { motif?: string; posterText?: Record<string, string>; photoText?: Record<string, string> } = {}): Album {
   const byId = new Map(photos.map((p) => [p.id, p]));
+  const format = album.format ?? 'portrait';
+  const poster = getTheme(themeId).coverStyle === 'poster';
   return {
     ...album,
-    pages: album.pages.map((page) => {
+    pages: album.pages.map((page, index) => {
       const layout = getLayout(page.layoutId);
-      if (!layout.themes || layout.themes.includes(themeId)) return page;
-      const options = layoutsFor(themeId, layout.kind, layout.photos.length);
+      // Covers change type with the style: a poster has no photo; other styles want one.
+      if (index === 0 && layout.kind === 'cover' && poster !== !!layout.poster) {
+        if (poster) return { ...page, layoutId: `pro-${format}-cover-poster`, photos: [], motif: page.motif ?? extra.motif ?? 'camera', text: extra.posterText ?? page.text };
+        const first = [...usedPhotoIds(album)][0] ?? photos[0]?.id;
+        const photoCover = layoutsFor(themeId, 'cover', 1, format)[0];
+        if (first && photoCover) return { ...page, layoutId: photoCover.id, photos: [{ photoId: first }], text: extra.photoText ?? page.text };
+      }
+      if (layoutsFor(themeId, layout.kind, undefined, album.format).some((l) => l.id === layout.id)) return page;
+      const all = layoutsFor(themeId, layout.kind, layout.photos.length, album.format);
+      const sameShape = all.filter((l) => !!l.spread === !!layout.spread);
+      const options = sameShape.length ? sameShape : all;
       if (!options.length) return page;
       const group = page.photos.map((s) => (s.photoId ? byId.get(s.photoId) : undefined));
       if (group.every((p): p is Photo => !!p)) {

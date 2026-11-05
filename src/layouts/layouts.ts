@@ -1,4 +1,7 @@
-import type { ThemeId } from '@/domain/types';
+import type { BookFormat, ThemeId } from '@/domain/types';
+
+import { PRO_LAYOUTS } from './proLayouts';
+import { getTheme } from './themes';
 
 import type { DecorItem, LayoutDef, PhotoFrame, TextBox } from './schema';
 
@@ -246,7 +249,10 @@ export const LAYOUTS: LayoutDef[] = [
   },
 ];
 
-export const LAYOUT_BY_ID: Record<string, LayoutDef> = Object.fromEntries(LAYOUTS.map((l) => [l.id, l]));
+/** Every layout: the hand-made portrait set plus the generated professional sets. */
+export const ALL_LAYOUTS: LayoutDef[] = [...LAYOUTS, ...PRO_LAYOUTS];
+
+export const LAYOUT_BY_ID: Record<string, LayoutDef> = Object.fromEntries(ALL_LAYOUTS.map((l) => [l.id, l]));
 
 export function getLayout(id: string): LayoutDef {
   const l = LAYOUT_BY_ID[id];
@@ -254,8 +260,22 @@ export function getLayout(id: string): LayoutDef {
   return l;
 }
 
-export function layoutsFor(theme: ThemeId, kind?: LayoutDef['kind'], photoCount?: number): LayoutDef[] {
-  return LAYOUTS.filter(
-    (l) => (!l.themes || l.themes.includes(theme)) && (!kind || l.kind === kind) && (photoCount === undefined || l.photos.length === photoCount),
+/**
+ * Layouts a theme can use for a book shape. Hand-made layouts are portrait
+ * only; professional styles (Gallery, Bold Graphic) use only the generated
+ * set; other styles use the generated set for landscape and square books.
+ */
+export function layoutsFor(theme: ThemeId, kind?: LayoutDef['kind'], photoCount?: number, format: BookFormat = 'portrait', options: { spreads?: boolean } = {}): LayoutDef[] {
+  const proTheme = !!getTheme(theme).pro;
+  return ALL_LAYOUTS.filter(
+    (l) =>
+      (!l.themes || l.themes.includes(theme)) &&
+      (!kind || l.kind === kind) &&
+      (photoCount === undefined || l.photos.length === photoCount) &&
+      (l.formats ?? ['portrait']).includes(format) &&
+      (proTheme ? !!l.pro : format === 'portrait' ? !l.pro : true) &&
+      (options.spreads !== false || !l.spread),
   );
 }
+
+export const isSpread = (layoutId: string) => !!LAYOUT_BY_ID[layoutId]?.spread;

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { DEMO_PHOTO_MAP, demoAlbum, demoSrc } from '@/demo/demoAlbum';
 import { THEMES } from '@/layouts/themes';
 import { useMedia } from '@/lib/useMedia';
-import { BookViewer, pagesOfSpread, spreadOf } from '@/screens/editor/BookViewer';
+import { bookViews, pagesIn, singleViews, viewIndexOf } from '@/engine/book';
+import { BookViewer } from '@/screens/editor/BookViewer';
 
 import { Chip, IconButton } from './ui';
 
@@ -23,7 +24,8 @@ export function Showcase() {
   const ref = useRef<HTMLElement>(null);
   const chips = useRef<HTMLDivElement>(null);
   const theme = THEMES[pos.theme];
-  const album = demoAlbum(theme.id);
+  const format = theme.defaultFormat ?? 'portrait';
+  const album = demoAlbum(theme.id, format);
   const running = playing && visible && !reduced;
 
   useEffect(() => {
@@ -47,9 +49,11 @@ export function Showcase() {
     if (!running) return;
     const t = setInterval(() => {
       setPos(({ theme: ti, page }) => {
-        const count = demoAlbum(THEMES[ti].id).pages.length;
-        const next = wide ? pagesOfSpread(spreadOf(page) + 1, count)[0] : page + 1;
-        return next === undefined || next >= count ? { theme: (ti + 1) % THEMES.length, page: 0 } : { theme: ti, page: next };
+        const t = THEMES[ti];
+        const pages = demoAlbum(t.id, t.defaultFormat ?? 'portrait').pages;
+        const views = wide ? bookViews(pages) : singleViews(pages);
+        const next = views[viewIndexOf(views, page) + 1];
+        return next ? { theme: ti, page: pagesIn(next)[0] } : { theme: (ti + 1) % THEMES.length, page: 0 };
       });
     }, STEP_MS);
     return () => clearInterval(t);
@@ -100,6 +104,7 @@ export function Showcase() {
           editing={false}
           resolveSrc={demoSrc}
           keyboard={false}
+          format={format}
         />
       </div>
       <p className="mt-3 text-center text-xs text-muted">Example album. Illustrations stand in for your photos; every page was laid out automatically.</p>

@@ -5,7 +5,8 @@
  * blob store, keyed by photo id.
  */
 
-export type ThemeId = 'minimal' | 'scrapbook' | 'polaroid' | 'romantic' | 'travel' | 'heritage';
+export type ThemeId = 'minimal' | 'scrapbook' | 'polaroid' | 'romantic' | 'travel' | 'heritage' | 'gallery' | 'graphic';
+export type BookFormat = 'portrait' | 'landscape' | 'square';
 export type GroupType = 'solo' | 'couple' | 'family' | 'friends' | 'group';
 export type Mood = 'joyful' | 'romantic' | 'calm' | 'adventurous' | 'nostalgic' | 'elegant' | 'playful';
 /** Album size: how many photo ideas the checklist offers (see TIERS in planner.ts). */
@@ -107,12 +108,16 @@ export interface AlbumPage {
   /** Text by role key ('title', 'subtitle', 'heading', 'date', 'body', 'names', 'note'). */
   text: Record<string, string>;
   chapterId?: string;
+  /** Illustration for poster covers (see render/motifs.ts). */
+  motif?: string;
   /** Set once the user changes the page by hand. */
   edited?: boolean;
 }
 
 export interface Album {
   pages: AlbumPage[];
+  /** Book shape (absent = portrait, for albums made before shapes existed). */
+  format?: BookFormat;
   seed: number;
   generatedAt: number;
 }
@@ -130,6 +135,8 @@ export interface Project {
   step: ProjectStep;
   /** Made with "Quick album": no questions; the title comes from the photos' dates. */
   quick?: boolean;
+  /** Book shape for the next design (absent = portrait). */
+  format?: BookFormat;
   /** Use every photo, including near-duplicates and blurry ones the album would set aside. */
   useAllPhotos?: boolean;
   createdAt: number;

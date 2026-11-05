@@ -8,9 +8,11 @@ import type { Album, Photo, Project } from '@/domain/types';
 import {
   addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
 } from '@/engine/edit';
+import { pageLabels } from '@/engine/book';
 import { curatePhotos } from '@/engine/curate';
-import { albumDateLabel, generateAlbum } from '@/engine/generate';
-import { getLayout } from '@/layouts/layouts';
+import { albumDateLabel, coverWords, generateAlbum } from '@/engine/generate';
+import { getLayout, isSpread } from '@/layouts/layouts';
+import { chooseMotif } from '@/render/motifs';
 import { getTheme } from '@/layouts/themes';
 import { PageView } from '@/render/PageView';
 import { takePendingFiles } from '@/state/pendingFiles';
@@ -141,6 +143,8 @@ export function EditorScreen() {
   }
 
   const idx = Math.min(current, album.pages.length - 1);
+  const format = album.format ?? 'portrait';
+  const labels = pageLabels(album.pages);
   const page = album.pages[idx];
   const layout = getLayout(page.layoutId);
   const used = usedPhotoIds(album);
@@ -197,7 +201,7 @@ export function EditorScreen() {
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
         <section aria-label="Album preview" className="min-w-0">
-          <BookViewer pages={album.pages} theme={theme} photos={map} current={idx} onSelect={select} onSlot={onSlot} selectedSlot={slot} editing />
+          <BookViewer pages={album.pages} theme={theme} photos={map} current={idx} onSelect={select} onSlot={onSlot} selectedSlot={slot} editing format={format} />
 
           <div className="scroll-snap-x mt-5 flex gap-2 overflow-x-auto pb-2" role="list" aria-label="Pages">
             {album.pages.map((pg, i) => (
@@ -207,10 +211,10 @@ export function EditorScreen() {
                 role="listitem"
                 onClick={() => select(i)}
                 aria-current={i === idx}
-                className={`w-16 shrink-0 snap-start rounded p-0.5 transition sm:w-20 ${i === idx ? 'ring-2 ring-pop' : 'opacity-80 hover:opacity-100'}`}
+                className={`${isSpread(pg.layoutId) ? 'w-32 sm:w-40' : 'w-16 sm:w-20'} shrink-0 snap-start rounded p-0.5 transition ${i === idx ? 'ring-2 ring-pop' : 'opacity-80 hover:opacity-100'}`}
               >
-                <PageView page={pg} theme={theme} photos={map} variant="thumb" />
-                <span className="mt-0.5 block text-center text-[11px] text-muted">{i === 0 ? 'Cover' : i + 1}</span>
+                <PageView page={pg} theme={theme} photos={map} variant="thumb" format={format} />
+                <span className="mt-0.5 block text-center text-[11px] text-muted">{labels[i]}</span>
               </button>
             ))}
           </div>
@@ -218,7 +222,7 @@ export function EditorScreen() {
 
         <aside className="space-y-5 rounded-3xl bg-white p-4 ring-1 ring-line lg:sticky lg:top-32 lg:self-start" aria-label="Edit page">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display text-lg">{idx === 0 ? 'Cover' : `Page ${idx + 1}`}</h2>
+            <h2 className="font-display text-lg">{idx === 0 ? 'Cover' : isSpread(page.layoutId) ? `Pages ${labels[idx]}` : `Page ${labels[idx]}`}</h2>
             <div className="flex">
               <IconButton icon="arrowLeft" label="Move page earlier" disabled={idx <= 1} onClick={() => (set(movePage(album, idx, idx - 1)), setCurrent(idx - 1))} />
               <IconButton icon="arrowRight" label="Move page later" disabled={idx === 0 || idx >= album.pages.length - 1} onClick={() => (set(movePage(album, idx, idx + 1)), setCurrent(idx + 1))} />
@@ -326,16 +330,32 @@ export function EditorScreen() {
       </div>
 
       {sheet === 'layout' && (
-        <LayoutSheet open onClose={() => setSheet(null)} page={page} themeId={project.themeId} photos={map} mode="change" onPick={(id) => (set(changeLayout(album, idx, id, photos)), setSlot(null))} />
+        <LayoutSheet open onClose={() => setSheet(null)} page={page} themeId={project.themeId} format={format} photos={map} mode="change" onPick={(id) => (set(changeLayout(album, idx, id, photos)), setSlot(null))} />
       )}
       {sheet === 'add' && (
-        <LayoutSheet open onClose={() => setSheet(null)} page={null} themeId={project.themeId} photos={map} mode="add" onPick={(id) => (set(addPage(album, idx, id, photos)), select(idx + 1))} />
+        <LayoutSheet open onClose={() => setSheet(null)} page={null} themeId={project.themeId} format={format} photos={map} mode="add" onPick={(id) => (set(addPage(album, idx, id, photos)), select(idx + 1))} />
       )}
       {sheet === 'picker' && slot !== null && <PhotoPickerSheet open onClose={() => setSheet(null)} photos={photos} used={used} onPick={(id) => set(placePhoto(album, idx, slot, id))} />}
       {sheet === 'crop' && slot !== null && slotPhoto && (
         <CropSheet open onClose={() => setSheet(null)} page={page} slot={slot} themeId={project.themeId} photo={slotPhoto} onSave={(f) => set(setFocal(album, idx, slot, f))} />
       )}
-      {sheet === 'theme' && <ThemeSheet open onClose={() => setSheet(null)} current={project.themeId} onPick={(id) => commit((p) => ({ ...p, themeId: id, album: p.album && applyTheme(p.album, id, photos) }))} />}
+      {sheet === 'theme' && (
+        <ThemeSheet
+          open
+          onClose={() => setSheet(null)}
+          current={project.themeId}
+          format={format}
+          onPick={(id) => commit((p) => ({ ...p, themeId: id, album: p.album && applyTheme(p.album, id, photos, { motif: chooseMotif(p.occasionId, p.answers.location, p.answers.title), posterText: coverWords(p, photos, true), photoText: coverWords(p, photos, false) }) }))}
+          onFormat={(f) => {
+            // A new shape needs new page designs: redesign with the same photos (undo brings the old one back).
+            commit((p) => {
+              const next = { ...p, format: f };
+              return { ...next, album: generateAlbum({ project: next, photos, seed: p.album?.seed ?? 1 }) };
+            });
+            select(0);
+          }}
+        />
+      )}
       {sheet === 'export' && <ExportSheet open onClose={() => setSheet(null)} album={album} photos={photos} themeId={project.themeId} title={project.answers.title} onGoToPage={select} projectId={project.id} />}
       <Confirm
         open={sheet === 'regen'}

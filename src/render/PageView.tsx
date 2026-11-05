@@ -1,7 +1,6 @@
 import { memo, useId, useMemo, type PointerEvent as ReactPointerEvent } from 'react';
 
-import type { AlbumPage, Photo } from '@/domain/types';
-import { PAGE_H, PAGE_W } from '@/layouts/schema';
+import type { AlbumPage, BookFormat, Photo } from '@/domain/types';
 import type { ThemeDef } from '@/layouts/themes';
 import type { Variant } from '@/storage/db';
 import { usePhotoUrl } from '@/storage/urls';
@@ -29,6 +28,8 @@ export interface PageViewProps {
   title?: string;
   /** Supplies image URLs directly instead of from storage (the home-page example). */
   resolveSrc?: (photoId: string) => string | undefined;
+  /** Book shape (default portrait). */
+  format?: BookFormat;
 }
 
 const rot = (xf?: Xform) => (xf ? `rotate(${xf.rot} ${xf.cx} ${xf.cy})` : undefined);
@@ -101,14 +102,14 @@ function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown, resol
   );
 }
 
-export const PageView = memo(function PageView({ page, theme, photos, variant = 'display', showEmpty, selectedSlot, onSlotPointerDown, className, title, resolveSrc }: PageViewProps) {
+export const PageView = memo(function PageView({ page, theme, photos, variant = 'display', showEmpty, selectedSlot, onSlotPointerDown, className, title, resolveSrc, format = 'portrait' }: PageViewProps) {
   const fonts = useFontsVersion();
   const uid = useId().replace(/:/g, '');
-  const scene = useMemo(() => buildScene({ page, theme, photos, measure: browserMeasure }), [page, theme, photos, fonts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const scene = useMemo(() => buildScene({ page, theme, photos, measure: browserMeasure, format }), [page, theme, photos, fonts, format]); // eslint-disable-line react-hooks/exhaustive-deps
   const ids = { shadow: `sh${uid}`, clip: `cl${uid}`, shade: `sd${uid}` };
   return (
     <svg
-      viewBox={`0 0 ${PAGE_W} ${PAGE_H}`}
+      viewBox={`0 0 ${scene.width} ${scene.height}`}
       className={className}
       role="img"
       aria-label={title ?? 'Album page'}

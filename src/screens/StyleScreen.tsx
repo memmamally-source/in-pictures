@@ -2,12 +2,15 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Icon } from '@/components/Icon';
+import { ShapePicker } from '@/components/ShapePicker';
 import { Button } from '@/components/ui';
-import type { Album, Photo, Project, ThemeId } from '@/domain/types';
+import type { Album, BookFormat, Photo, Project, ThemeId } from '@/domain/types';
 import { applyTheme } from '@/engine/edit';
-import { generateAlbum } from '@/engine/generate';
+import { coverWords, generateAlbum } from '@/engine/generate';
 import { getLayout } from '@/layouts/layouts';
-import { THEMES, recommendThemes, type ThemeDef } from '@/layouts/themes';
+import { FORMATS } from '@/layouts/schema';
+import { THEMES, getTheme, recommendThemes, type ThemeDef } from '@/layouts/themes';
+import { chooseMotif } from '@/render/motifs';
 import { PageView } from '@/render/PageView';
 import { useProject } from '@/state/project';
 import { getOccasion } from '@/templates/occasions';
@@ -17,15 +20,18 @@ export function useThemePreview(project: Project, photos: Photo[], themeId: Them
   return useMemo(() => {
     const sample = photos.slice(0, 9);
     const album: Album = generateAlbum({ project: { ...project, themeId, answers: { ...project.answers, length: 'deluxe' } }, photos: sample, seed: 11 });
+    const format = album.format ?? 'portrait';
     const interior = album.pages.filter((p) => getLayout(p.layoutId).kind === 'photos');
     // Always show a chapter opener too: it's where each style's boldest colours live.
     const chapter = album.pages.find((p) => getLayout(p.layoutId).kind === 'chapter') ?? {
       id: `preview-chapter-${themeId}`,
-      layoutId: 'chapter-centered',
+      layoutId: format === 'portrait' && !getTheme(themeId).pro ? 'chapter-centered' : `pro-${format}-chapter-text`,
       photos: [],
       text: { heading: project.chapters[1]?.title ?? project.chapters[0]?.title ?? 'Chapter one' },
     };
-    return { cover: album.pages[0], pages: [chapter, interior[0]] };
+    // Prefer showing a two-page spread when the design has one.
+    const showcase = interior.find((p) => getLayout(p.layoutId).spread) ?? interior[0];
+    return { cover: album.pages[0], pages: [chapter, showcase], format };
   }, [project, photos, themeId]);
 }
 
@@ -38,8 +44,15 @@ export function StyleScreen() {
   const ranked = recommendThemes(occasion.themes, project.answers.mood);
   const map = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
 
+  const format = project.format ?? 'portrait';
   const choose = (id: ThemeId) =>
-    updateProject((p) => ({ ...p, themeId: id, album: p.album ? applyTheme(p.album, id, photos) : undefined }));
+    updateProject((p) => ({ ...p, themeId: id, album: p.album ? applyTheme(p.album, id, photos, { motif: chooseMotif(p.occasionId, p.answers.location, p.answers.title), posterText: coverWords(p, photos, true), photoText: coverWords(p, photos, false) }) : undefined }));
+  const chooseFormat = (f: BookFormat) =>
+    updateProject((p) => {
+      const next = { ...p, format: f };
+      // New shape, new page designs (same photos).
+      return { ...next, album: p.album ? generateAlbum({ project: next, photos, seed: p.album.seed }) : undefined };
+    });
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-28 sm:px-6">
@@ -47,6 +60,11 @@ export function StyleScreen() {
       <p className="mt-1 max-w-xl text-sm text-muted">
         Each style changes the paper, typography, frames and page designs — previewed here with your own photos. You can switch any time; your photos and edits are kept.
       </p>
+      <section className="mt-5 max-w-xl">
+        <h2 className="mb-2 text-sm font-medium">Book shape</h2>
+        <ShapePicker value={format} onChange={chooseFormat} />
+        {project.album && <p className="mt-2 text-xs text-muted">Changing the shape redesigns the pages with the same photos.</p>}
+      </section>
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {ranked.map((id, i) => {
           const theme = THEMES.find((t) => t.id === id)!;
@@ -83,17 +101,18 @@ function ThemeCard({ theme, project, photos, map, selected, recommended, onSelec
       aria-pressed={selected}
       className={`group rounded-3xl p-4 text-left ring-2 transition ${selected ? 'bg-white ring-pop shadow-soft' : 'bg-white/70 ring-transparent hover:bg-white hover:ring-line'}`}
     >
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex items-start gap-2">
         {[preview.cover, ...preview.pages].map((pg, i) =>
           pg ? (
-            <div key={i} className="overflow-hidden rounded-sm shadow-soft">
-              <PageView page={pg} theme={theme} photos={map} variant="thumb" showEmpty />
+            <div key={i} className="min-w-0 overflow-hidden rounded-sm shadow-soft" style={{ flex: getLayout(pg.layoutId).spread ? 2 : 1 }}>
+              <PageView page={pg} theme={theme} photos={map} variant="thumb" showEmpty format={preview.format} />
             </div>
-          ) : (
-            <div key={i} className="aspect-[4/5] rounded-sm" style={{ background: theme.colors.page }} />
-          ),
+          ) : null,
         )}
       </div>
+      {theme.defaultFormat && theme.defaultFormat !== (project.format ?? 'portrait') && (
+        <p className="mt-2 text-xs text-pop-dark">Looks its best as a {FORMATS[theme.defaultFormat].label.toLowerCase()} book.</p>
+      )}
       <div className="mt-4 flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-xl">

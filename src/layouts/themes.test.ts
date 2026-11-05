@@ -23,7 +23,7 @@ describe('theme colours', () => {
     }
   });
 
-  it('gives each style its own paper colour', () => {
-    expect(new Set(THEMES.map((t) => t.colors.page)).size).toBe(THEMES.length);
+  it('gives each style its own colour identity', () => {
+    expect(new Set(THEMES.map((t) => `${t.colors.page}|${t.colors.chapterPage}|${t.fonts.title.family}`)).size).toBe(THEMES.length);
   });
 });

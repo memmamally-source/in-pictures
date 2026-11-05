@@ -1,6 +1,6 @@
 import type { Album, Photo, ThemeId } from '@/domain/types';
 import { Brand } from '@/config/brand';
-import { PAGE_INCHES, PAGE_W } from '@/layouts/schema';
+import { FORMATS, PAGE_W, canvasSize } from '@/layouts/schema';
 import { getTheme } from '@/layouts/themes';
 import { renderScene } from '@/render/canvas';
 import { loadAlbumFonts } from '@/render/fonts';
@@ -37,19 +37,28 @@ export async function exportPdf({ album, photos, themeId, title, quality, onProg
   const theme = getTheme(themeId);
   const byId = new Map(photos.map((p) => [p.id, p]));
   const q = QUALITY[quality];
-  const pxPerUnit = (q.dpi * PAGE_INCHES.w) / PAGE_W;
-  const bleed = bleedUnits(quality);
-  const sheet = { w: PAGE_INCHES.w + 2 * q.bleedIn, h: PAGE_INCHES.h + 2 * q.bleedIn };
-  const pdf = new jsPDF({ unit: 'in', format: [sheet.w, sheet.h], orientation: 'portrait', compress: true });
+  const format = album.format ?? 'portrait';
+  const inches = FORMATS[format].inches;
+  const pxPerUnit = (q.dpi * inches.w) / PAGE_W;
+  const bleed = bleedUnits(quality, format);
+  const sheet = { w: inches.w + 2 * q.bleedIn, h: inches.h + 2 * q.bleedIn };
+  const orientation = sheet.w > sheet.h ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ unit: 'in', format: [sheet.w, sheet.h], orientation, compress: true });
   pdf.setProperties({ title, creator: Brand.name });
 
-  const pages = quality === 'print' ? printPlan(album, includeCover).pages : album.pages;
+  // Every quality prints spreads as two pages; print adds blanks to keep spreads facing.
+  const plan = printPlan(album, quality !== 'print' || includeCover);
+  // Only print files need an even page count.
+  const pages = quality === 'print' || plan.pages.at(-1) !== null ? plan.pages : plan.pages.slice(0, -1);
   const total = pages.length;
+  const pageSize = canvasSize(format);
   for (let i = 0; i < total; i++) {
     if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
-    const page = pages[i];
-    // A blank page (added to make the count even) is plain paper in the album's colour.
-    const scene = page ? buildScene({ page, theme, photos: byId, measure: browserMeasure, bleed }) : { background: theme.colors.page, ops: [] };
+    const entry = pages[i];
+    // A blank page is plain paper in the album's colour.
+    const scene = entry
+      ? buildScene({ page: entry.page, theme, photos: byId, measure: browserMeasure, bleed, format })
+      : { background: theme.colors.page, ops: [], width: pageSize.w, height: pageSize.h };
     const opened: ImageBitmap[] = [];
     const canvas = await renderScene(scene, pxPerUnit, async (photoId) => {
       const blob = (await repo.getBlob(photoId, quality === 'standard' ? 'display' : 'full')) ?? (await repo.getBlob(photoId, 'display'));
@@ -59,14 +68,25 @@ export async function exportPdf({ album, photos, themeId, title, quality, onProg
       return bmp;
     }, bleed);
     opened.forEach((b) => b.close());
-    const jpeg = await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('Could not encode page'))), 'image/jpeg', q.jpeg));
+    // Half of a spread: cut the page out of the spread canvas (each half keeps bleed on all sides).
+    const out = entry?.half ? cropCanvas(canvas, entry.half === 'left' ? 0 : 100 * pxPerUnit, (pageSize.w + 2 * bleed) * pxPerUnit) : canvas;
+    const jpeg = await new Promise<Blob>((res, rej) => out.toBlob((b) => (b ? res(b) : rej(new Error('Could not encode page'))), 'image/jpeg', q.jpeg));
     canvas.width = canvas.height = 0;
-    if (i > 0) pdf.addPage([sheet.w, sheet.h], 'portrait');
+    out.width = out.height = 0;
+    if (i > 0) pdf.addPage([sheet.w, sheet.h], orientation);
     pdf.addImage(new Uint8Array(await jpeg.arrayBuffer()), 'JPEG', 0, 0, sheet.w, sheet.h, undefined, 'NONE');
     onProgress?.(i + 1, total);
     await new Promise((r) => setTimeout(r, 0)); // let the UI breathe between pages
   }
   return pdf.output('blob');
+}
+
+function cropCanvas(src: HTMLCanvasElement, x: number, w: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = Math.round(w);
+  c.height = src.height;
+  c.getContext('2d')!.drawImage(src, Math.round(x), 0, c.width, c.height, 0, 0, c.width, c.height);
+  return c;
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

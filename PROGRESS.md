@@ -22,6 +22,7 @@
 | Album sizes Simple / Deluxe / Extravagant (10–20 / 20–50 / 50–100 ideas) | ✅ Owner feedback round 3; free for everyone (owner decision); built so sizes could become paid later |
 | Animated examples | ✅ "See what it makes" on the home page and a shareable page at `#/examples`: an example album (illustrations, labelled as such) laid out by the real engine, turning pages and cycling all six styles. Pauses off screen, on tap, and for reduced motion. Owner feedback round 4 |
 | Review round (owner: "make it slick") | ✅ Smart selection (duplicates/blur, on-device), smart crop centres, backup/restore files, undo/redo, folded checklist + "Photography tips", "More options" in the questions form, returning users see their albums first, compact phone editor toolbar, privacy page (`#/privacy`); verified no requests leave the site |
+| Photo-book vision (owner references: Rapid Studio brag book, Souvence, PikPerfect) | ✅ Book shapes (portrait / landscape 11 × 8.5 / square 12 × 12), generated professional layouts, two-page spreads (incl. panoramas) on screen and in print, Gallery and Bold Graphic styles, poster covers with 16 illustrations; occasions suggest shape + style (weddings → square Gallery) |
 | Live site | ✅ https://memmamally-source.github.io/in-pictures/ (Pages on, deploys from `main`) |
 | Physical phone testing | ❌ Not done |
 

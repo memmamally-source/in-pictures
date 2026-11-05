@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import type { Answers, Project } from '@/domain/types';
 import { createId } from '@/lib/id';
-import { recommendThemes } from '@/layouts/themes';
+import { getTheme, recommendThemes } from '@/layouts/themes';
 import { repo } from '@/services/repository';
 import { getOccasion } from '@/templates/occasions';
 import { buildPlan, chaptersFor } from '@/templates/planner';
@@ -26,6 +26,7 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   async create(occasionId, answers, options = {}) {
     const occasion = getOccasion(occasionId);
     const now = Date.now();
+    const themeId = recommendThemes(occasion.themes, answers.mood)[0];
     const project: Project = {
       id: createId('album'),
       schemaVersion: 1,
@@ -33,7 +34,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
       answers,
       plan: buildPlan(occasion, answers),
       chapters: chaptersFor(occasion),
-      themeId: recommendThemes(occasion.themes, answers.mood)[0],
+      themeId,
+      format: occasion.defaultFormat ?? getTheme(themeId).defaultFormat ?? 'portrait',
       step: options.quick ? 'album' : answers.mode === 'plan' ? 'plan' : 'photos',
       quick: options.quick || undefined,
       createdAt: now,

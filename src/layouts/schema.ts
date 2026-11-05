@@ -1,4 +1,4 @@
-import type { ThemeId } from '@/domain/types';
+import type { BookFormat, ThemeId } from '@/domain/types';
 
 /**
  * Page-layout schema. All geometry is in page units: the page is 100 units
@@ -7,8 +7,32 @@ import type { ThemeId } from '@/domain/types';
  * keeps the export faithful to the preview.
  */
 export const PAGE_W = 100;
+/** Height of a portrait page (the hand-made layouts are drawn for this). */
 export const PAGE_H = 125;
 export const PAGE_INCHES = { w: 8, h: 10 } as const;
+
+/**
+ * Book shapes. A page is always 100 units wide; its height follows the
+ * shape. A two-page spread is 200 units wide.
+ */
+export type { BookFormat };
+
+export const FORMATS: Record<BookFormat, { label: string; inches: { w: number; h: number }; help: string }> = {
+  portrait: { label: 'Portrait', inches: { w: 8, h: 10 }, help: '8 × 10 in — classic photo book' },
+  landscape: { label: 'Landscape', inches: { w: 11, h: 8.5 }, help: '11 × 8.5 in — made for travel and spreads' },
+  square: { label: 'Square', inches: { w: 12, h: 12 }, help: '12 × 12 in — the wedding-album size' },
+};
+
+/** Page height in units for a shape. */
+export const pageHeight = (f: BookFormat = 'portrait') => (100 * FORMATS[f].inches.h) / FORMATS[f].inches.w;
+
+/** Page units per printed inch for a shape. */
+export const unitsPerInch = (f: BookFormat = 'portrait') => 100 / FORMATS[f].inches.w;
+
+/** Size in units of a page or a two-page spread. */
+export function canvasSize(f: BookFormat = 'portrait', spread = false): { w: number; h: number } {
+  return { w: spread ? 200 : 100, h: pageHeight(f) };
+}
 
 export interface Rect {
   x: number;
@@ -52,7 +76,9 @@ export interface TextBox extends Rect {
 export type DecorKind =
   | 'tape' | 'heart' | 'star' | 'sparkle' | 'flower' | 'sprig' | 'postmark' | 'plane' | 'compass'
   | 'divider' | 'flourish' | 'double-border' | 'corners' | 'airmail' | 'confetti' | 'shade-bottom'
-  | 'dots-row' | 'sun' | 'strip' | 'rule' | 'washi' | 'leaf' | 'scallop-border';
+  | 'dots-row' | 'sun' | 'strip' | 'rule' | 'washi' | 'leaf' | 'scallop-border'
+  /** A flat illustration chosen per album (page.motif), for poster covers. */
+  | 'motif';
 export type DecorColor = 'accent' | 'accent2' | 'ink' | 'muted' | 'paper' | 'mat';
 
 export interface DecorItem extends Rect {
@@ -84,4 +110,12 @@ export interface LayoutDef {
   weight?: number;
   /** Photo runs to the page edge. */
   bleed?: boolean;
+  /** Shapes it's drawn for (omitted = portrait only, the hand-made set). */
+  formats?: BookFormat[];
+  /** Covers both pages of a spread (200 units wide). */
+  spread?: boolean;
+  /** Generated professional layout (see proLayouts.ts). */
+  pro?: boolean;
+  /** For covers: no photo, a big title and an illustration (Bold Graphic). */
+  poster?: boolean;
 }

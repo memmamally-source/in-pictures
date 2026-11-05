@@ -1,4 +1,4 @@
-import type { AlbumLength, GroupType, Mood, ShotCategory, ThemeId } from '@/domain/types';
+import type { AlbumLength, BookFormat, GroupType, Mood, ShotCategory, ThemeId } from '@/domain/types';
 
 /**
  * Template configuration schema.
@@ -99,6 +99,8 @@ export interface OccasionDef {
   themes: ThemeId[];
   defaultMood: Mood;
   defaultLength?: AlbumLength;
+  /** Book shape suggested for this occasion (else the style's, else portrait). */
+  defaultFormat?: BookFormat;
   /** Suggested album title; tokens as in ShotDef.title. */
   titleTemplate: string;
   fallbackTitle: string;

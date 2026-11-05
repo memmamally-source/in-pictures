@@ -1,9 +1,11 @@
-import type { Album, AlbumLength, AlbumPage, Chapter, Photo, PhotoSlot, PlanItem, Project, ThemeId } from '@/domain/types';
-import { layoutsFor } from '@/layouts/layouts';
+import type { Album, AlbumLength, AlbumPage, BookFormat, Chapter, Photo, PhotoSlot, PlanItem, Project, ThemeId } from '@/domain/types';
+import { getLayout, layoutsFor } from '@/layouts/layouts';
 import type { LayoutDef } from '@/layouts/schema';
 import { getTheme } from '@/layouts/themes';
 import { mulberry32 } from '@/render/decor';
 import { cropLoss, frameAspect } from '@/render/geometry';
+import { chooseMotif } from '@/render/motifs';
+import { getOccasion } from '@/templates/occasions';
 import { joinNames } from '@/templates/planner';
 
 import { curatePhotos } from './curate';
@@ -21,7 +23,7 @@ import { curatePhotos } from './curate';
  */
 
 export interface GenerateInput {
-  project: Pick<Project, 'id' | 'answers' | 'chapters' | 'plan' | 'themeId' | 'coverPhotoId' | 'useAllPhotos'>;
+  project: Pick<Project, 'id' | 'answers' | 'chapters' | 'plan' | 'themeId' | 'coverPhotoId' | 'useAllPhotos' | 'format'> & { occasionId?: string };
   photos: Photo[];
   seed: number;
 }
@@ -244,6 +246,8 @@ export interface RankContext {
   themeId: ThemeId;
   density: number;
   rand: () => number;
+  /** Book shape (default portrait). */
+  format?: BookFormat;
 }
 
 export interface Candidate {
@@ -254,13 +258,16 @@ export interface Candidate {
 
 /** Scores every layout of one kind for a fixed group of photos, best first. */
 export function rankLayouts(kind: LayoutDef['kind'], group: Photo[], ctx: RankContext): Candidate[] {
-  return layoutsFor(ctx.themeId, kind, group.length)
+  const theme = getTheme(ctx.themeId);
+  return layoutsFor(ctx.themeId, kind, group.length, ctx.format ?? 'portrait')
     .map((layout) => {
       const assignment = assign(layout, group, ctx.themeId);
       let cost = assignment.cost + captionCost(layout, group, assignment.order) + (1 - (layout.weight ?? 1)) * 2;
       if (group.length === 1 && group[0].favourite) cost -= 0.8;
       // Signature layouts (made for one or two styles) are what make a style look like itself.
       if (layout.themes && layout.themes.length <= 2) cost -= 0.7;
+      // Spreads: favoured by photo-book styles, rare in scrapbook-like ones.
+      if (layout.spread) cost += theme.spreadBias ? -0.9 * theme.spreadBias : 1.6;
       cost += (ctx.rand() - 0.5) * 0.8;
       return { layout, assignment, cost };
     })
@@ -271,41 +278,55 @@ function slotsFor(c: Candidate, group: Photo[]): PhotoSlot[] {
   return c.assignment.order.map((pi) => ({ photoId: group[pi].id }));
 }
 
-/** Splits one section into pages (dynamic programming over photo runs). */
-export function paginate(photos: Photo[], ctx: RankContext): { layout: LayoutDef; slots: PhotoSlot[] }[] {
+const MAX_PER_PAGE = 6;
+const MAX_PER_SPREAD = 7;
+
+/**
+ * Splits one section into pages (dynamic programming over photo runs).
+ * `onLeft` says whether the next page is a left-hand page: two-page spreads
+ * can only start there, so the solver tracks which side each page falls on.
+ */
+export function paginate(photos: Photo[], ctx: RankContext, onLeft = true): { layout: LayoutDef; slots: PhotoSlot[] }[] {
   const n = photos.length;
   if (!n) return [];
-  // Precompute the ranked candidates for every run [i, i+k).
-  const options: Candidate[][][] = [];
+  const pro = !!getTheme(ctx.themeId).pro;
+  // Precompute the ranked candidates for every run [i, i+k), pages and spreads separately.
+  const pagesFor: Candidate[][][] = [];
+  const spreadsFor: Candidate[][][] = [];
   for (let i = 0; i < n; i++) {
-    options[i] = [];
-    for (let k = 1; k <= Math.min(6, n - i); k++) {
+    pagesFor[i] = [];
+    spreadsFor[i] = [];
+    for (let k = 1; k <= Math.min(MAX_PER_SPREAD, n - i); k++) {
       const group = photos.slice(i, i + k);
-      const ranked = rankLayouts('photos', group, ctx).slice(0, 4);
-      // Per-photo penalty for straying from the target density: keeps the
-      // total independent of how many pages a section is cut into.
-      const densityCost = k * 0.35 * (k - ctx.density) ** 2;
-      options[i][k] = ranked.map((c) => ({ ...c, cost: c.cost + densityCost }));
+      const ranked = rankLayouts('photos', group, ctx);
+      // Per-photo penalty for straying from the target density (per page): keeps
+      // the total independent of how many pages a section is cut into.
+      const single = ranked.filter((c) => !c.layout.spread).slice(0, 4);
+      const spread = ranked.filter((c) => c.layout.spread).slice(0, 3);
+      if (k <= MAX_PER_PAGE) pagesFor[i][k] = single.map((c) => ({ ...c, cost: c.cost + k * 0.35 * (k - ctx.density) ** 2 }));
+      spreadsFor[i][k] = spread.map((c) => ({ ...c, cost: c.cost + k * 0.35 * (k / 2 - ctx.density) ** 2 }));
     }
   }
-  // best[i][prevLayoutId] → minimal cost to lay out photos[i..n) given the previous page.
-  const memo = new Map<string, { cost: number; k: number; c: Candidate | null }>();
-  const solve = (i: number, prev: Candidate | null): { cost: number; k: number; c: Candidate | null } => {
+  type Step = { cost: number; k: number; c: Candidate | null };
+  const memo = new Map<string, Step>();
+  const solve = (i: number, prev: Candidate | null, left: boolean): Step => {
     if (i >= n) return { cost: 0, k: 0, c: null };
-    const key = `${i}|${prev?.layout.id ?? ''}`;
+    const key = `${i}|${prev?.layout.id ?? ''}|${left ? 'L' : 'R'}`;
     const hit = memo.get(key);
     if (hit) return hit;
-    let best = { cost: Infinity, k: 1, c: null as Candidate | null };
-    for (let k = 1; k <= Math.min(6, n - i); k++) {
-      for (const c of options[i][k]) {
+    let best: Step = { cost: Infinity, k: 1, c: null };
+    for (let k = 1; k <= Math.min(MAX_PER_SPREAD, n - i); k++) {
+      const choices = [...(pagesFor[i][k] ?? []), ...(left ? spreadsFor[i][k] ?? [] : [])];
+      for (const c of choices) {
         let t = c.cost;
         if (prev) {
           if (prev.layout.id === c.layout.id) t += 2.5;
           if (prev.layout.photos.length === k) t += 0.8;
-          if (prev.layout.bleed && c.layout.bleed) t += 3;
+          if (prev.layout.bleed && c.layout.bleed) t += pro ? 0.3 : 3;
         }
         if (t >= best.cost) continue;
-        const rest = solve(i + k, c);
+        // A spread fills both sides, so the next page is a left page again.
+        const rest = solve(i + k, c, c.layout.spread ? left : !left);
         if (t + rest.cost < best.cost) best = { cost: t + rest.cost, k, c };
       }
     }
@@ -315,10 +336,12 @@ export function paginate(photos: Photo[], ctx: RankContext): { layout: LayoutDef
   const pages: { layout: LayoutDef; slots: PhotoSlot[] }[] = [];
   let i = 0;
   let prev: Candidate | null = null;
+  let left = onLeft;
   while (i < n) {
-    const step = solve(i, prev);
+    const step = solve(i, prev, left);
     if (!step.c) break;
     pages.push({ layout: step.c.layout, slots: slotsFor(step.c, photos.slice(i, i + step.k)) });
+    if (!step.c.layout.spread) left = !left;
     prev = step.c;
     i += step.k;
   }
@@ -329,9 +352,12 @@ export function paginate(photos: Photo[], ctx: RankContext): { layout: LayoutDef
 
 export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   const themeId = project.themeId;
+  const theme = getTheme(themeId);
+  const format: BookFormat = project.format ?? 'portrait';
   const a = project.answers;
   const rand = mulberry32(seed * 2654435761 + project.id.length);
-  const ctx: RankContext = { themeId, density: DENSITY[a.length], rand };
+  const ctx: RankContext = { themeId, density: DENSITY[a.length], rand, format };
+  const proSet = theme.pro || format !== 'portrait';
   const pages: AlbumPage[] = [];
   let n = 0;
   const id = () => `pg_${seed.toString(36)}_${n++}`;
@@ -347,14 +373,23 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   // Cover.
   const cover = sorted.find((p) => p.id === project.coverPhotoId) ?? sorted.find((p) => p.favourite) ?? sorted[0];
   const coverText = { title: a.title || 'Our album', subtitle: a.location?.trim() ?? '', date: dateLabel };
-  if (cover) {
+  const poster = theme.coverStyle === 'poster';
+  if (poster) {
+    pages.push({
+      id: id(),
+      layoutId: `pro-${format}-cover-poster`,
+      photos: [],
+      text: coverWords(project, photos, true),
+      motif: chooseMotif(project.occasionId ?? 'custom', a.location, a.title),
+    });
+  } else if (cover) {
     const best = rankLayouts('cover', [cover], ctx)[0];
     pages.push({ id: id(), layoutId: best.layout.id, photos: [{ photoId: cover.id }], text: coverText });
   } else {
-    pages.push({ id: id(), layoutId: 'chapter-centered', photos: [], text: { heading: coverText.title, date: dateLabel } });
+    pages.push({ id: id(), layoutId: proSet ? `pro-${format}-chapter-text` : 'chapter-centered', photos: [], text: { heading: coverText.title, date: dateLabel } });
   }
 
-  const interior = sorted.length >= 8 && cover ? sorted.filter((p) => p.id !== cover.id) : sorted;
+  const interior = !poster && sorted.length >= 8 && cover ? sorted.filter((p) => p.id !== cover.id) : sorted;
   const sections = buildSections(project, interior);
 
   // Closing photo: the last photo of the story, when there are enough photos to spare one.
@@ -368,7 +403,14 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   // Chapter openers: only for real sections, only the larger ones, within a limit.
   const eligible = sections.length >= 2 ? sections.filter((s) => s.title && s.photos.length >= 3) : [];
   const chosen = new Set([...eligible].sort((x, y) => y.photos.length - x.photos.length).slice(0, CHAPTER_LIMIT[a.length]));
-  const chapterLayouts = layoutsFor(themeId, 'chapter');
+  const chapterLayouts = layoutsFor(themeId, 'chapter', undefined, format);
+  const plainChapter = proSet ? `pro-${format}-chapter-text` : 'chapter-centered';
+  // The cover is page 0, a right-hand page; the next page is on the left.
+  let onLeft = true;
+  const push = (page: AlbumPage) => {
+    pages.push(page);
+    if (!getLayout(page.layoutId).spread) onLeft = !onLeft;
+  };
 
   sections.forEach((section, si) => {
     let body = section.photos;
@@ -377,25 +419,47 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
       const text = { heading: section.title ?? '', date: section.dateLabel ?? '' };
       if (pick.photos.length) {
         const ranked = [...body].sort((x, y) => Number(y.favourite) - Number(x.favourite) || x.order - y.order);
-        const hero = ranked.find((p) => cropLoss(p.width / p.height, frameAspect(pick.photos[0], pick.photos[0].frame ?? getTheme(themeId).frame)) < 0.45);
+        const hero = ranked.find((p) => cropLoss(p.width / p.height, frameAspect(pick.photos[0], pick.photos[0].frame ?? theme.frame)) < 0.45);
         if (hero) {
           body = body.filter((p) => p !== hero);
-          pages.push({ id: id(), layoutId: pick.id, photos: [{ photoId: hero.id }], text, chapterId: section.chapterId });
+          push({ id: id(), layoutId: pick.id, photos: [{ photoId: hero.id }], text, chapterId: section.chapterId });
         } else {
-          pages.push({ id: id(), layoutId: 'chapter-centered', photos: [], text, chapterId: section.chapterId });
+          push({ id: id(), layoutId: plainChapter, photos: [], text, chapterId: section.chapterId });
         }
       } else {
-        pages.push({ id: id(), layoutId: pick.id, photos: [], text, chapterId: section.chapterId });
+        push({ id: id(), layoutId: pick.id, photos: [], text, chapterId: section.chapterId });
       }
     }
-    for (const pg of paginate(body, ctx)) {
-      pages.push({ id: id(), layoutId: pg.layout.id, photos: pg.slots, text: {}, chapterId: section.chapterId ?? `section-${si}` });
+    for (const pg of paginate(body, ctx, onLeft)) {
+      push({ id: id(), layoutId: pg.layout.id, photos: pg.slots, text: {}, chapterId: section.chapterId ?? `section-${si}` });
     }
   });
 
   const closingText = { title: a.title || 'Our album', date: dateLabel, names: joinNames(a.names), note: a.closingNote?.trim() ?? '' };
-  if (closingPhoto) pages.push({ id: id(), layoutId: 'closing-photo', photos: [{ photoId: closingPhoto.id }], text: closingText });
-  else pages.push({ id: id(), layoutId: 'closing-text', photos: [], text: closingText });
+  const closing = (kind: 'photo' | 'text') => (proSet ? `pro-${format}-closing-${kind}` : `closing-${kind}`);
+  if (closingPhoto) pages.push({ id: id(), layoutId: closing('photo'), photos: [{ photoId: closingPhoto.id }], text: closingText });
+  else pages.push({ id: id(), layoutId: closing('text'), photos: [], text: closingText });
 
-  return { pages, seed, generatedAt: Date.now() };
+  return { pages, seed, generatedAt: Date.now(), format };
+}
+
+/**
+ * Cover words. Photo covers: the title, with the place and dates beneath.
+ * Poster covers: the place in big letters (or the title), the occasion beneath.
+ * Only the user's answers, the occasion's name and dates are used.
+ */
+export function coverWords(project: GenerateInput['project'], photos: Photo[], poster: boolean): Record<string, string> {
+  const a = project.answers;
+  const raw = albumDateLabel(project, photos);
+  const date = raw && raw !== a.title.trim() ? raw : '';
+  if (!poster) return { title: a.title || 'Our album', subtitle: a.location?.trim() ?? '', date };
+  const place = a.location?.split(',')[0].trim();
+  const occasionName = project.occasionId ? getOccasion(project.occasionId).name : '';
+  return place ? { title: place, subtitle: a.title === place ? '' : shortOccasion(occasionName), date } : { title: a.title || 'Our album', subtitle: '', date };
+}
+
+/** "International travel" → "Travel"; short occasion names stay as they are. */
+function shortOccasion(name: string): string {
+  const map: Record<string, string> = { 'International travel': 'Travel', 'Local holidays & staycations': 'Staycation', 'Christmas & seasonal': 'Holidays', 'Festivals & concerts': 'Festival', 'Family gatherings': 'Family', 'Friendship memories': 'Friends', 'School memories': 'School days', 'Sporting events': 'Match day', 'Pet memories': 'Pets', 'Baby’s first year': 'First year', 'Everyday life': 'Everyday', 'Custom album': '', 'Theme parks': 'Theme park', 'Road trips': 'Road trip', 'Date nights': 'Date night', 'Work events': '' };
+  return map[name] ?? name.replace(/s$/, '');
 }

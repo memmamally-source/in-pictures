@@ -10,7 +10,10 @@ import { Brand } from '@/config/brand';
 import type { Project } from '@/domain/types';
 import { albumDateLabel } from '@/engine/generate';
 import { downloadBlob } from '@/export/pdf';
+import { getLayout } from '@/layouts/layouts';
+import { pageHeight } from '@/layouts/schema';
 import { getTheme } from '@/layouts/themes';
+import { PageView } from '@/render/PageView';
 import { createBackup, restoreBackup } from '@/services/backup';
 import { useLibrary } from '@/state/library';
 import { usePhotoUrl } from '@/storage/urls';
@@ -185,6 +188,8 @@ function RestoreButton() {
   );
 }
 
+const NO_PHOTOS = new Map();
+
 function coverPhotoId(p: Project): string | undefined {
   return p.album?.pages[0]?.photos[0]?.photoId ?? p.coverPhotoId ?? undefined;
 }
@@ -205,6 +210,8 @@ function AlbumCard({ project }: { project: Project }) {
   const occasion = getOccasion(project.occasionId);
   const theme = getTheme(project.themeId);
   const url = usePhotoUrl(coverPhotoId(project), 'thumb');
+  const first = project.album?.pages[0];
+  const posterCover = first && getLayout(first.layoutId).poster ? first : undefined;
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -215,15 +222,20 @@ function AlbumCard({ project }: { project: Project }) {
   return (
     <article className="group relative">
       <Link to={href} className="block">
-        <div className="book-shadow relative aspect-[4/5] overflow-hidden rounded-r-xl rounded-l-sm transition group-hover:-translate-y-1" style={{ background: theme.colors.page }}>
-          {url ? (
+        <div
+          className="book-shadow relative overflow-hidden rounded-r-xl rounded-l-sm transition group-hover:-translate-y-1"
+          style={{ background: theme.colors.page, aspectRatio: `100 / ${pageHeight(project.album?.format ?? project.format)}` }}
+        >
+          {posterCover ? (
+            <PageView page={posterCover} theme={theme} photos={NO_PHOTOS} format={project.album?.format} />
+          ) : url ? (
             <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className={`absolute inset-0 grid place-items-center text-5xl ${TINTS[occasion.tint].bg}`} aria-hidden="true">
               {occasion.icon}
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 pt-10">
+          <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 pt-10 ${posterCover ? 'hidden' : ''}`}>
             <p className="line-clamp-2 text-[17px] leading-tight text-white" style={{ fontFamily: `"${theme.fonts.title.family}"`, fontStyle: theme.fonts.title.style }}>
               {project.answers.title}
             </p>

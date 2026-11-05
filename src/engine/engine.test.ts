@@ -64,10 +64,11 @@ describe('layout library', () => {
     }
   });
 
-  it('makes themes genuinely different (exclusive layouts, fonts, frames)', () => {
-    const exclusive = (id: ThemeId) => LAYOUTS.filter((l) => l.themes?.length && l.themes.includes(id) && l.themes.length <= 2).length;
-    for (const t of THEMES) expect(exclusive(t.id), t.id).toBeGreaterThan(0);
-    expect(new Set(THEMES.map((t) => `${t.fonts.title.family}|${t.frame}|${t.background}`)).size).toBe(6);
+  it('makes themes genuinely different (their own layouts, fonts, frames)', () => {
+    const signature = (id: ThemeId) => layoutsFor(id, undefined, undefined, 'portrait').map((l) => l.id).sort().join(',');
+    // Hand-made styles each have signature layouts; professional styles use the generated photo-book set.
+    for (const t of THEMES.filter((x) => !x.pro)) expect(LAYOUTS.some((l) => l.themes?.includes(t.id) && l.themes.length <= 2), t.id).toBe(true);
+    expect(new Set(THEMES.map((t) => `${signature(t.id)}|${t.fonts.title.family}|${t.frame}|${t.background}`)).size).toBe(THEMES.length);
   });
 
   it('recommends themes from the occasion and mood', () => {

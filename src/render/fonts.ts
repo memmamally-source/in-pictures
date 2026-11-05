@@ -8,6 +8,8 @@ import '@fontsource-variable/inter/index.css';
 import '@fontsource/playfair-display/400.css';
 import '@fontsource/playfair-display/400-italic.css';
 import '@fontsource/special-elite/400.css';
+import '@fontsource/anton/400.css';
+import '@fontsource/great-vibes/400.css';
 
 import { useSyncExternalStore } from 'react';
 

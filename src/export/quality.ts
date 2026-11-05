@@ -1,5 +1,6 @@
-import type { Album, Photo, ThemeId } from '@/domain/types';
+import type { Album, BookFormat, Photo, ThemeId } from '@/domain/types';
 import { getLayout } from '@/layouts/layouts';
+import { unitsPerInch } from '@/layouts/schema';
 import { getTheme } from '@/layouts/themes';
 import { coverCrop, effectiveDpi, focalFor, innerRect } from '@/render/geometry';
 
@@ -24,15 +25,21 @@ export const QUALITY: Record<Quality, { dpi: number; jpeg: number; bleedIn: numb
   },
 };
 
-/** Page units per inch (the page is 100 units = 8 in wide). */
+/** Page units per inch for the classic portrait book (100 units = 8 in). */
 export const UNITS_PER_INCH = 12.5;
 
 /** Bleed for a quality, in page units. */
-export const bleedUnits = (q: Quality) => QUALITY[q].bleedIn * UNITS_PER_INCH;
+export const bleedUnits = (q: Quality, format: BookFormat = 'portrait') => QUALITY[q].bleedIn * unitsPerInch(format);
+
+/** One printed page: a whole page, or one half of a two-page spread. */
+export interface PrintPage {
+  page: Album['pages'][number];
+  half?: 'left' | 'right';
+}
 
 export interface PrintPlan {
-  /** Pages to print, in order; null = a blank page added to make the count even. */
-  pages: (Album['pages'][number] | null)[];
+  /** Pages to print, in order; null = a blank page (to keep spreads facing, or make the count even). */
+  pages: (PrintPage | null)[];
   blankAdded: boolean;
   /** Below the minimum many photo-book printers ask for. */
   belowTypicalMinimum: boolean;
@@ -47,11 +54,29 @@ export const TYPICAL_MIN_PAGES = 20;
  * then the cover page is left out of the interior file.
  */
 export function printPlan(album: Album, includeCover: boolean): PrintPlan {
-  const pages: PrintPlan['pages'] = includeCover ? [...album.pages] : album.pages.slice(1);
-  const blankAdded = pages.length % 2 === 1;
-  if (blankAdded) pages.push(null);
+  // Position 0 is the cover (a right-hand page); spreads start on left-hand
+  // pages (odd positions), as in the on-screen book.
+  const seq: (PrintPage | null)[] = [{ page: album.pages[0] }];
+  let blankAdded = false;
+  for (const page of album.pages.slice(1)) {
+    if (getLayout(page.layoutId).spread) {
+      if (seq.length % 2 === 0) {
+        seq.push(null); // keep the spread facing
+        blankAdded = true;
+      }
+      seq.push({ page, half: 'left' }, { page, half: 'right' });
+    } else seq.push({ page });
+  }
+  const pages = includeCover ? seq : seq.slice(1);
+  if (pages.length % 2 === 1) {
+    pages.push(null);
+    blankAdded = true;
+  }
   return { pages, blankAdded, belowTypicalMinimum: pages.length < TYPICAL_MIN_PAGES };
 }
+
+/** Printed page count of an album (a spread is two pages). */
+export const printedPageCount = (album: Album) => album.pages.reduce((n, p) => n + (getLayout(p.layoutId).spread ? 2 : 1), 0);
 
 export interface ResolutionIssue {
   page: number;
@@ -69,6 +94,7 @@ export interface ExportCheck {
 }
 
 export function checkAlbum(album: Album, photos: Photo[], themeId: ThemeId, quality: Quality): ExportCheck {
+  const perInch = unitsPerInch(album.format);
   const theme = getTheme(themeId);
   const byId = new Map(photos.map((p) => [p.id, p]));
   const issues: ResolutionIssue[] = [];
@@ -84,7 +110,7 @@ export function checkAlbum(album: Album, photos: Photo[], themeId: ThemeId, qual
       const ia = photo.width / photo.height;
       const fa = inner.w / inner.h;
       const crop = coverCrop(ia, fa, focalFor(slot.focal, photo, ia, fa));
-      const ppi = Math.round(effectiveDpi(Math.min(photo.width, photo.originalWidth), crop, inner.w));
+      const ppi = Math.round(effectiveDpi(Math.min(photo.width, photo.originalWidth), crop, inner.w, perInch));
       if (ppi < fairAt) issues.push({ page: pi, slot: si, photoId: photo.id, photoName: photo.name, ppi, level: ppi < lowAt ? 'low' : 'fair' });
     });
   });
