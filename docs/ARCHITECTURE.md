@@ -82,11 +82,15 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 
 `src/export/quality.ts` computes each photo’s effective resolution in its frame (`pixels in the crop ÷ printed inches`) and flags anything under 220 ppi for high-quality exports (under 150 ppi = low), or under 100 ppi for standard.
 
-**Printing limitations:** there’s no bleed, no crop marks and no CMYK/colour profile, and text is rasterised. The export is fine for screens and home printing but **not** set up for professional print shops. A print-partner integration would need a bleed-aware renderer (frames touching the edge extended by 0.125 in) and the partner’s size templates. The page-unit geometry makes that a renderer change, not a layout change.
+**Print-ready export** (`quality: 'print'`): 300 dpi, 1/8 in (1.5625 units) bleed on every side, so files are 8.25 × 10.25 in. `buildScene({ bleed })` grows edge-to-edge photos, edge decorations and evenly repeating paper patterns into the bleed (`extendToBleed`); framed, rotated and inset items stay put. A test keeps every text box at least 1/4 in inside the trim. `printPlan` pads to an even page count with a blank page and can leave the cover out for printers that make hardcovers from their own spine-sized template; it flags albums under 20 pages (a common printer minimum). Colours are sRGB (browsers can't produce CMYK; printers convert). Text is rasterised at 300 dpi. 8 × 10 in portrait matches a common photo-book size; other sizes (12 × 12 in square, landscape) need their own layout sets.
 
 ## 4b. Example album (home page)
 
 `src/demo/` builds an imaginary seaside album from 14 illustrated scenes (`scenes.ts`, SVG generated in code — no stock photos) and runs it through the real generator for each style (`demoAlbum.ts`). `Showcase` (home page and `#/examples`) shows it in the book viewer, turning pages every 2.6 s and moving to the next style at the end. `PageView`/`BookViewer` take a `resolveSrc` so example pictures don't come from storage. It's labelled as an example on screen.
+
+## 4c. Quick album
+
+`#/quick`: pick any number of photos and get an album with no questions. It creates a `custom` project marked `quick`, hands the files to the album screen (`state/pendingFiles.ts`), imports them, then generates: the title comes from the photos' dates and the size from the count (`templates/quick.ts`: ≤24 Simple, ≤70 Deluxe, more Extravagant).
 
 ## 5. Storage, autosave, recovery
 

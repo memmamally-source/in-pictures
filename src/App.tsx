@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-d
 import { ChooseOccasion } from './screens/ChooseOccasion';
 import { EditorScreen } from './screens/editor/EditorScreen';
 import { Examples } from './screens/Examples';
+import { QuickAlbum } from './screens/QuickAlbum';
 import { Home } from './screens/Home';
 import { Personalise } from './screens/Personalise';
 import { PhotosScreen } from './screens/PhotosScreen';
@@ -30,6 +31,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/examples" element={<Examples />} />
+        <Route path="/quick" element={<QuickAlbum />} />
         <Route path="/new" element={<ChooseOccasion />} />
         <Route path="/new/:occasionId" element={<Personalise />} />
         <Route path="/album/:id" element={<ProjectLayout />}>

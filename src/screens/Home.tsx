@@ -36,8 +36,8 @@ export function Home() {
               <ButtonLink to="/new" size="lg" icon="plus">
                 Create an Album
               </ButtonLink>
-              <ButtonLink to="/new?have=1" size="lg" variant="secondary" icon="image">
-                I already have photos
+              <ButtonLink to="/quick" size="lg" variant="secondary" icon="image">
+                Quick album: just add photos
               </ButtonLink>
               <ButtonLink to="/examples" size="lg" variant="ghost" icon="play">
                 See examples

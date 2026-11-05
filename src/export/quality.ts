@@ -10,12 +10,48 @@ import { coverCrop, defaultFocal, effectiveDpi, innerRect } from '@/render/geome
  * in print. Screen viewing needs far less.
  */
 
-export type Quality = 'standard' | 'high';
+export type Quality = 'standard' | 'high' | 'print';
 
-export const QUALITY = {
-  standard: { dpi: 150, jpeg: 0.85, label: 'Standard', help: 'For screens and sharing. Smaller file.' },
-  high: { dpi: 300, jpeg: 0.92, label: 'High quality', help: '300 dpi pages for home printing or keeping. Larger file.' },
-} as const;
+export const QUALITY: Record<Quality, { dpi: number; jpeg: number; bleedIn: number; label: string; help: string }> = {
+  standard: { dpi: 150, jpeg: 0.85, bleedIn: 0, label: 'Standard', help: 'For screens and sharing. Smaller file.' },
+  high: { dpi: 300, jpeg: 0.92, bleedIn: 0, label: 'High quality', help: '300 dpi pages for home printing or keeping. Larger file.' },
+  print: {
+    dpi: 300,
+    jpeg: 0.95,
+    bleedIn: 0.125,
+    label: 'Print-ready',
+    help: 'For ordering a printed book: 8 × 10 in pages at 300 dpi with 1/8 in bleed on every side (8.25 × 10.25 in files), sRGB colour.',
+  },
+};
+
+/** Page units per inch (the page is 100 units = 8 in wide). */
+export const UNITS_PER_INCH = 12.5;
+
+/** Bleed for a quality, in page units. */
+export const bleedUnits = (q: Quality) => QUALITY[q].bleedIn * UNITS_PER_INCH;
+
+export interface PrintPlan {
+  /** Pages to print, in order; null = a blank page added to make the count even. */
+  pages: (Album['pages'][number] | null)[];
+  blankAdded: boolean;
+  /** Below the minimum many photo-book printers ask for. */
+  belowTypicalMinimum: boolean;
+}
+
+/** Typical minimum page count for printed photo books (it varies by printer). */
+export const TYPICAL_MIN_PAGES = 20;
+
+/**
+ * Printed books are bound in sheets, so the page count must be even. Some
+ * printers make the cover separately from a template sized to their spine;
+ * then the cover page is left out of the interior file.
+ */
+export function printPlan(album: Album, includeCover: boolean): PrintPlan {
+  const pages: PrintPlan['pages'] = includeCover ? [...album.pages] : album.pages.slice(1);
+  const blankAdded = pages.length % 2 === 1;
+  if (blankAdded) pages.push(null);
+  return { pages, blankAdded, belowTypicalMinimum: pages.length < TYPICAL_MIN_PAGES };
+}
 
 export interface ResolutionIssue {
   page: number;
@@ -37,7 +73,7 @@ export function checkAlbum(album: Album, photos: Photo[], themeId: ThemeId, qual
   const byId = new Map(photos.map((p) => [p.id, p]));
   const issues: ResolutionIssue[] = [];
   const emptyFrames: ExportCheck['emptyFrames'] = [];
-  const [lowAt, fairAt] = quality === 'high' ? [150, 220] : [72, 100];
+  const [lowAt, fairAt] = quality === 'standard' ? [72, 100] : [150, 220];
   album.pages.forEach((page, pi) => {
     const layout = getLayout(page.layoutId);
     layout.photos.forEach((frame, si) => {

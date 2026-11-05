@@ -11,7 +11,7 @@ interface LibraryState {
   projects: Project[];
   loaded: boolean;
   refresh: () => Promise<void>;
-  create: (occasionId: string, answers: Answers) => Promise<Project>;
+  create: (occasionId: string, answers: Answers, options?: { quick?: boolean }) => Promise<Project>;
   rename: (id: string, title: string) => Promise<void>;
   duplicate: (id: string) => Promise<Project | undefined>;
   remove: (id: string) => Promise<void>;
@@ -23,7 +23,7 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   async refresh() {
     set({ projects: await repo.listProjects(), loaded: true });
   },
-  async create(occasionId, answers) {
+  async create(occasionId, answers, options = {}) {
     const occasion = getOccasion(occasionId);
     const now = Date.now();
     const project: Project = {
@@ -34,7 +34,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
       plan: buildPlan(occasion, answers),
       chapters: chaptersFor(occasion),
       themeId: recommendThemes(occasion.themes, answers.mood)[0],
-      step: answers.mode === 'plan' ? 'plan' : 'photos',
+      step: options.quick ? 'album' : answers.mode === 'plan' ? 'plan' : 'photos',
+      quick: options.quick || undefined,
       createdAt: now,
       updatedAt: now,
     };

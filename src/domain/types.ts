@@ -121,6 +121,8 @@ export interface Project {
   coverPhotoId?: string;
   album?: Album;
   step: ProjectStep;
+  /** Made with "Quick album": no questions; the title comes from the photos' dates. */
+  quick?: boolean;
   createdAt: number;
   updatedAt: number;
 }

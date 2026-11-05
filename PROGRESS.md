@@ -13,7 +13,9 @@
 | Full journey (occasion → questions → checklist → photos → style → album → edit → save → PDF) | ✅ Works in headless Chromium (desktop + emulated iPhone 13) |
 | 22 occasions (incl. Date nights, Work events), 678 photo ideas, 51 layouts, 6 styles | ✅ |
 | Local storage, autosave, storage warnings | ✅ IndexedDB `in-pictures` |
-| PDF export 150 / 300 dpi with resolution checks | ✅ Not print-shop ready (no bleed/CMYK) |
+| PDF export 150 / 300 dpi with resolution checks | ✅ |
+| Print-ready PDF | ✅ 300 dpi, 1/8 in bleed (8.25 × 10.25 in), even pages, optional separate cover, sRGB. Verified with pdfinfo/pdfimages; not yet sent to a real printer |
+| Quick album ("just add photos") | ✅ 60 photos imported and designed in ~9 s in headless Chromium |
 | Bright lifestyle palette | ✅ Owner feedback round 1 |
 | Multi-select "Who's in the photos?" + many more ideas | ✅ Owner feedback round 2: standard albums now 16–36 ideas (was 9–23), long 22–52; family + friends gets ideas for both and together |
 | Hosting | GitHub Pages workflow ready (`deploy.yml`); needs Settings → Pages → GitHub Actions and a public repo (or paid plan) |
@@ -25,11 +27,13 @@
 ## Next
 
 1. Open the site on a real iPhone and Android phone, fix what turns up.
-1. **App Store and Google Play (owner goal):** wrap the web app with Capacitor (keeps IndexedDB, the photo picker and PDF export), add native photo-library access and file sharing, then TestFlight / internal testing. Needs the owner's Apple Developer account (US$99/year) and Google Play developer account (US$25 once), privacy labels and store listings. Store submissions only with the owner's go-ahead.
-2. Backup/restore file (albums are lost if the browser clears its data).
-3. Touch drag-to-reorder for photos and pages; undo.
-4. Put the end-to-end Playwright flow in the repo and CI.
-5. Name clearance (trademark, domain, app stores).
+2. **App Store and Google Play (owner goal):** wrap the web app with Capacitor (keeps IndexedDB, the photo picker and PDF export), add native photo-library access and file sharing, then TestFlight / internal testing. Needs the owner's Apple Developer account (US$99/year) and Google Play developer account (US$25 once), privacy labels and store listings. Store submissions only with the owner's go-ahead.
+3. Order one real test print (e.g. a photo-book service that takes 8 × 10 in PDFs with 1/8 in bleed) to check colours, trim and binding margins.
+4. More print sizes (12 × 12 in square for weddings, landscape) and two-page panoramic spreads.
+5. Backup/restore file (albums are lost if the browser clears its data).
+6. Touch drag-to-reorder for photos and pages; undo.
+7. Put the end-to-end Playwright flow in the repo and CI.
+8. Name clearance (trademark, domain, app stores).
 
 ## Key decisions
 

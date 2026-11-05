@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 
-import { Button, Chip, Notice, ProgressBar, Sheet } from '@/components/ui';
+import { Button, Chip, Notice, ProgressBar, Sheet, Toggle } from '@/components/ui';
 import type { Album, Photo, ThemeId } from '@/domain/types';
 import { downloadBlob, exportPdf, pdfFilename } from '@/export/pdf';
-import { QUALITY, checkAlbum, type Quality } from '@/export/quality';
+import { QUALITY, TYPICAL_MIN_PAGES, checkAlbum, printPlan, type Quality } from '@/export/quality';
 import { formatBytes } from '@/storage/quota';
 
 export function ExportSheet({ open, onClose, album, photos, themeId, title, onGoToPage }: {
@@ -16,6 +16,9 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
   onGoToPage: (index: number) => void;
 }) {
   const [quality, setQuality] = useState<Quality>('standard');
+  const [includeCover, setIncludeCover] = useState(true);
+  const plan = printPlan(album, includeCover);
+  const pageCount = quality === 'print' ? plan.pages.length : album.pages.length;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +30,11 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
   async function run() {
     setError(null);
     setResult(null);
-    setProgress({ done: 0, total: album.pages.length });
+    setProgress({ done: 0, total: pageCount });
     abort.current = new AbortController();
     try {
-      const blob = await exportPdf({ album, photos, themeId, title, quality, signal: abort.current.signal, onProgress: (done, total) => setProgress({ done, total }) });
-      const name = pdfFilename(title);
+      const blob = await exportPdf({ album, photos, themeId, title, quality, includeCover, signal: abort.current.signal, onProgress: (done, total) => setProgress({ done, total }) });
+      const name = pdfFilename(title, quality);
       setResult({ blob, name });
       downloadBlob(blob, name);
     } catch (e) {
@@ -69,7 +72,7 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
             </Button>
           ) : (
             <Button icon="download" onClick={run} disabled={busy}>
-              {busy ? 'Exporting…' : `Export ${album.pages.length} pages`}
+              {busy ? 'Exporting…' : `Export ${pageCount} pages`}
             </Button>
           )}
         </div>
@@ -86,9 +89,35 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
             ))}
           </div>
           <p className="mt-2 text-xs text-muted">
-            {QUALITY[quality].help} Pages are 8 × 10 in (portrait), {QUALITY[quality].dpi} dpi.
+            {QUALITY[quality].help}
+            {quality !== 'print' && ` Pages are 8 × 10 in (portrait), ${QUALITY[quality].dpi} dpi.`}
           </p>
         </div>
+
+        {quality === 'print' && (
+          <div className="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-line">
+            <p className="text-sm font-medium">Ready for a print shop</p>
+            <ul className="space-y-1 text-sm text-muted">
+              <li>✓ 8 × 10 in pages with 1/8 in bleed (files are 8.25 × 10.25 in)</li>
+              <li>✓ 300 dpi, edge-to-edge photos and paper run into the bleed</li>
+              <li>✓ Text and important details kept well inside the trim</li>
+              <li>
+                ✓ {plan.pages.length} pages{plan.blankAdded ? ', including one blank page added at the end (books need an even number)' : ''}
+              </li>
+            </ul>
+            <Toggle
+              checked={includeCover}
+              onChange={setIncludeCover}
+              label="Include the cover as the first page"
+              help="Turn off if your printer makes hardcovers from its own cover template."
+            />
+            {plan.belowTypicalMinimum && (
+              <Notice tone="warn">
+                Many photo-book printers need at least {TYPICAL_MIN_PAGES} pages. Add pages, add photos, or choose a bigger album size before ordering.
+              </Notice>
+            )}
+          </div>
+        )}
 
         {check.emptyFrames.length > 0 && (
           <Notice tone="warn">
@@ -122,9 +151,10 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
         )}
 
         <p className="text-xs leading-relaxed text-muted">
-          The PDF is made on this device — nothing is uploaded. Each page is saved as a high-resolution image, so it matches the preview exactly (text isn’t selectable). It’s
-          suitable for screens and home printing. It is not set up for professional print shops: there’s no bleed or colour profile, and print services have their own
-          size and margin rules.
+          The PDF is made on this device — nothing is uploaded. Each page is saved as a high-resolution image, so it matches the preview exactly (text isn’t selectable).{' '}
+          {quality === 'print'
+            ? 'Before ordering, check your printer’s spec: the book size (this is 8 × 10 in portrait), minimum pages, and how they want the cover. Colours are sRGB; printers convert them to their inks, so colours can shift slightly.'
+            : 'Fine for screens and home printing. To order a printed book, choose Print-ready.'}
         </p>
 
         {progress && (

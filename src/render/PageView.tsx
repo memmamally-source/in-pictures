@@ -126,7 +126,7 @@ export const PageView = memo(function PageView({ page, theme, photos, variant = 
       {scene.ops.map((op, i) => {
         if (op.t === 'path') {
           return (
-            <g key={i} transform={rot(op.xf)}>
+            <g key={i} transform={op.shift ? `translate(${-op.shift} ${-op.shift})` : rot(op.xf)}>
               <Parts parts={op.parts} shadeId={ids.shade} />
             </g>
           );

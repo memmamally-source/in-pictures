@@ -33,6 +33,8 @@ export interface PathOp {
   t: 'path';
   parts: ResolvedPart[];
   xf?: Xform;
+  /** Drawn shifted up and left by this many units (patterns that extend into the bleed). */
+  shift?: number;
 }
 
 export interface FrameOp {
@@ -77,6 +79,26 @@ export interface SceneInput {
   theme: ThemeDef;
   photos: Map<string, Pick<Photo, 'width' | 'height' | 'caption'>>;
   measure: Measure;
+  /**
+   * Print bleed in page units. Edge-to-edge photos, edge decorations and the
+   * paper pattern extend this far beyond the trim so a slightly off cut
+   * never shows a white sliver. 0 for screen and ordinary PDFs.
+   */
+  bleed?: number;
+}
+
+/** Patterns that repeat evenly, so they can simply be drawn larger for the bleed. */
+const EXTENDABLE = new Set(['dots', 'grid', 'kraft', 'linen', 'confetti']);
+
+/** Grows a rectangle past every page edge it touches. */
+export function extendToBleed(r: Rect, bleed: number): Rect {
+  if (!bleed) return r;
+  const e = 0.5;
+  const left = r.x <= e ? bleed + r.x : 0;
+  const top = r.y <= e ? bleed + r.y : 0;
+  const right = r.x + r.w >= PAGE_W - e ? bleed + (PAGE_W - r.x - r.w) : 0;
+  const bottom = r.y + r.h >= PAGE_H - e ? bleed + (PAGE_H - r.y - r.h) : 0;
+  return { x: r.x - left, y: r.y - top, w: r.w + left + right, h: r.h + top + bottom };
 }
 
 function hash(s: string): number {
@@ -85,7 +107,7 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
-export function buildScene({ page, theme, photos, measure }: SceneInput): Scene {
+export function buildScene({ page, theme, photos, measure, bleed = 0 }: SceneInput): Scene {
   const layout = getLayout(page.layoutId);
   const dark = isDarkPage(theme, layout.kind === 'chapter' ? 'chapter' : 'other');
   const c = theme.colors;
@@ -104,8 +126,13 @@ export function buildScene({ page, theme, photos, measure }: SceneInput): Scene 
 
   const ops: Op[] = [];
   const bgKind = layout.kind === 'chapter' ? theme.chapterBackground : theme.background;
-  const bgParts = backgroundPaths(bgKind, PAGE_W, PAGE_H);
-  if (bgParts.length) ops.push({ t: 'path', parts: resolve(bgParts, palette.pattern) });
+  if (bleed && EXTENDABLE.has(bgKind)) {
+    const parts = backgroundPaths(bgKind, PAGE_W + 2 * bleed, PAGE_H + 2 * bleed);
+    if (parts.length) ops.push({ t: 'path', parts: resolve(parts, palette.pattern), shift: bleed });
+  } else {
+    const bgParts = backgroundPaths(bgKind, PAGE_W, PAGE_H);
+    if (bgParts.length) ops.push({ t: 'path', parts: resolve(bgParts, palette.pattern) });
+  }
 
   const decor = [...(layout.decor ?? [])];
   if (layout.kind === 'photos' && !layout.bleed && theme.pageDecor.length) {
@@ -115,7 +142,8 @@ export function buildScene({ page, theme, photos, measure }: SceneInput): Scene 
   const pushDecor = (over: boolean) => {
     for (const d of decor) {
       if (!!d.over !== over) continue;
-      ops.push({ t: 'path', parts: resolve(decorPaths(d.kind, d), decorColor(d.color)), xf: xfOf(d, d.rotate) });
+      const r = d.rotate ? d : extendToBleed(d, bleed);
+      ops.push({ t: 'path', parts: resolve(decorPaths(d.kind, { ...d, ...r }), decorColor(d.color)), xf: xfOf(d, d.rotate) });
     }
   };
 
@@ -133,7 +161,9 @@ export function buildScene({ page, theme, photos, measure }: SceneInput): Scene 
     const shape = frame.shape ?? theme.shape;
     const tilt = style === 'polaroid' ? Math.max(theme.tilt, 0.6) : theme.tilt;
     const rot = (frame.rotate ?? 0) * tilt;
-    const inner = innerRect(frame, style);
+    // Edge-to-edge photos run into the bleed (unrotated, unframed ones only).
+    const placed = style === 'none' && !rot ? extendToBleed(frame, bleed) : frame;
+    const inner = innerRect(placed, style);
     const slot = page.photos[i];
     const meta = slot?.photoId ? photos.get(slot.photoId) : undefined;
     let photo: FrameOp['photo'] = null;
@@ -163,7 +193,7 @@ export function buildScene({ page, theme, photos, measure }: SceneInput): Scene 
     frameBoxes.push({ box: frame, inner, xf, style });
   });
 
-  for (const d of shade) ops.push({ t: 'path', parts: resolve(decorPaths(d.kind, d), '#000') });
+  for (const d of shade) ops.push({ t: 'path', parts: resolve(decorPaths(d.kind, extendToBleed(d, bleed)), '#000') });
   pushDecor(true);
 
   for (const tb of layout.texts) {

@@ -260,3 +260,12 @@ describe('helpers', () => {
     expect(p).toMatchObject({ complete: 1, skipped: 1, total: plan.length - 1 });
   });
 });
+
+describe('quick album', () => {
+  it('picks a size from the number of photos', async () => {
+    const { sizeForCount } = await import('./quick');
+    expect(sizeForCount(12)).toBe('simple');
+    expect(sizeForCount(40)).toBe('deluxe');
+    expect(sizeForCount(300)).toBe('extravagant');
+  });
+});

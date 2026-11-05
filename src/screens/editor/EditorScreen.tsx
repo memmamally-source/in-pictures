@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Icon } from '@/components/Icon';
+import { ImportStatus } from '@/components/ImportStatus';
 import { Thumb } from '@/components/Thumb';
 import { Button, ButtonLink, Confirm, IconButton, inputClass } from '@/components/ui';
 import type { Album, Photo } from '@/domain/types';
 import {
   addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
 } from '@/engine/edit';
-import { generateAlbum } from '@/engine/generate';
+import { albumDateLabel, generateAlbum } from '@/engine/generate';
 import { getLayout } from '@/layouts/layouts';
 import { getTheme } from '@/layouts/themes';
 import { PageView } from '@/render/PageView';
+import { takePendingFiles } from '@/state/pendingFiles';
 import { useProject } from '@/state/project';
+import { QUICK_TITLE, sizeForCount } from '@/templates/quick';
 
 import { BookViewer } from './BookViewer';
 import { ExportSheet } from './ExportSheet';
@@ -40,12 +43,23 @@ export function EditorScreen() {
   const map = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
   const album = project.album;
 
-  // First visit: design the album from the photos.
+  // Quick album: start importing the photos picked on the previous screen.
+  const addFiles = useProject((s) => s.addFiles);
+  useEffect(() => {
+    const files = takePendingFiles(project.id);
+    if (files?.length) void addFiles(files);
+  }, [project.id, addFiles]);
+
+  // First visit: design the album from the photos (once any import has finished).
   const generated = useRef(false);
   useEffect(() => {
     if (!project.album && photos.length && !generated.current && !imports?.active) {
       generated.current = true;
-      updateProject((p) => ({ ...p, step: 'album', album: generateAlbum({ project: p, photos, seed: 1 }) }));
+      updateProject((p) => {
+        const title = p.quick && p.answers.title === QUICK_TITLE ? albumDateLabel(p, photos) || QUICK_TITLE : p.answers.title;
+        const next = { ...p, answers: { ...p.answers, title, length: p.quick ? sizeForCount(photos.length) : p.answers.length } };
+        return { ...next, step: 'album', album: generateAlbum({ project: next, photos, seed: 1 }) };
+      });
     }
   }, [project.album, photos, imports?.active, updateProject]);
 
@@ -53,8 +67,18 @@ export function EditorScreen() {
     return (
       <main className="mx-auto max-w-xl px-4 py-16 text-center">
         <Icon name="book" size={36} className="mx-auto text-muted" />
-        <h1 className="mt-3 font-display text-2xl">{photos.length ? 'Designing your album…' : 'Add some photos first'}</h1>
-        {!photos.length && (
+        <h1 className="mt-3 font-display text-2xl">
+          {imports?.active ? 'Adding your photos…' : photos.length ? 'Designing your album…' : 'Add some photos first'}
+        </h1>
+        {imports?.active && (
+          <>
+            <p className="mt-2 text-sm text-muted">The pages are designed as soon as they’re all in.</p>
+            <div className="mt-5 text-left">
+              <ImportStatus />
+            </div>
+          </>
+        )}
+        {!photos.length && !imports?.active && (
           <ButtonLink className="mt-5" to={`/album/${project.id}/photos`}>
             Add photos
           </ButtonLink>

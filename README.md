@@ -14,7 +14,9 @@ A mobile-first web app (React 19, TypeScript, Vite, Tailwind CSS 4) that:
 6. **lays the album out automatically** with a deterministic layout engine (51 page layouts);
 7. lets you **edit** it in a page-turning book view (layouts, swap/replace photos, crop/zoom, text, add/remove/reorder pages, restyle, redesign);
 8. **saves everything locally** (IndexedDB) with autosave and a visible save status;
-9. **exports a PDF** at 150 dpi (standard) or 300 dpi (high quality), with resolution warnings.
+9. **exports a PDF** at 150 dpi (standard), 300 dpi (high quality) or **print-ready** (300 dpi with 1/8 in bleed, even page count, optional separate cover), with resolution warnings;
+10. has a **Quick album**: drop in any number of photos and get a designed album with no questions;
+11. shows an **animated example** of every style on the home page and at `#/examples`.
 
 The app is local-first: photos never leave the device, there are no accounts, no payments and no paid APIs.
 

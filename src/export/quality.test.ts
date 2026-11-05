@@ -31,5 +31,6 @@ describe('export checks', () => {
     expect(pdfFilename('Honeymoon in Santorini, Greece')).toBe('honeymoon-in-santorini-greece.pdf');
     expect(pdfFilename('Café “Ü” 🎉')).toBe('cafe-u.pdf');
     expect(pdfFilename('***')).toBe('album.pdf');
+    expect(pdfFilename('1–3 June 2026', 'print')).toBe('1-3-june-2026-print.pdf');
   });
 });
