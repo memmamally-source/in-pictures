@@ -266,9 +266,12 @@ export function getLayout(id: string): LayoutDef {
  * set; other styles use the generated set for landscape and square books.
  */
 export function layoutsFor(theme: ThemeId, kind?: LayoutDef['kind'], photoCount?: number, format: BookFormat = 'portrait', options: { spreads?: boolean } = {}): LayoutDef[] {
-  const proTheme = !!getTheme(theme).pro;
+  const t = getTheme(theme);
+  const proTheme = !!t.pro;
   return ALL_LAYOUTS.filter(
     (l) =>
+      (!t.singlePhotoPages || l.kind !== 'photos' || (l.photos.length === 1 && !!l.bleed && !l.spread && !l.needsHeading)) &&
+      (!t.singlePhotoPages || l.kind !== 'cover' || !!l.bleed) &&
       (!l.themes || l.themes.includes(theme)) &&
       (!kind || l.kind === kind) &&
       (photoCount === undefined || l.photos.length === photoCount) &&

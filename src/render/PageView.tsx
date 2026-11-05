@@ -35,13 +35,14 @@ export interface PageViewProps {
 const rot = (xf?: Xform) => (xf ? `rotate(${xf.rot} ${xf.cx} ${xf.cy})` : undefined);
 
 function Parts({ parts, shadeId }: { parts: ResolvedPart[]; shadeId: string }) {
+  // shadeId names the downward gradient; `${shadeId}u` the upward one.
   return (
     <>
       {parts.map((p, i) => (
         <path
           key={i}
           d={p.d}
-          fill={p.shade ? `url(#${shadeId})` : p.fill ?? 'none'}
+          fill={p.shade ? `url(#${shadeId}${p.shade === 'up' ? 'u' : ''})` : p.fill ?? 'none'}
           stroke={p.stroke ?? 'none'}
           strokeWidth={p.strokeWidth}
           strokeLinecap="round"
@@ -55,7 +56,7 @@ function Parts({ parts, shadeId }: { parts: ResolvedPart[]; shadeId: string }) {
 
 function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown, resolveSrc }: {
   op: FrameOp;
-  ids: { shadow: string; clip: string };
+  ids: { shadow: string; clip: string; mono: string };
   variant: Variant;
   showEmpty?: boolean;
   selected?: boolean;
@@ -72,7 +73,7 @@ function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown, resol
     const w = inner.w / crop.sw;
     const h = inner.h / crop.sh;
     image = url ? (
-      <image href={url} x={inner.x - crop.sx * w} y={inner.y - crop.sy * h} width={w} height={h} preserveAspectRatio="none" />
+      <image href={url} x={inner.x - crop.sx * w} y={inner.y - crop.sy * h} width={w} height={h} preserveAspectRatio="none" filter={op.mono ? `url(#${ids.mono})` : undefined} />
     ) : (
       <rect x={inner.x} y={inner.y} width={inner.w} height={inner.h} fill="#00000010" />
     );
@@ -106,7 +107,7 @@ export const PageView = memo(function PageView({ page, theme, photos, variant = 
   const fonts = useFontsVersion();
   const uid = useId().replace(/:/g, '');
   const scene = useMemo(() => buildScene({ page, theme, photos, measure: browserMeasure, format }), [page, theme, photos, fonts, format]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ids = { shadow: `sh${uid}`, clip: `cl${uid}`, shade: `sd${uid}` };
+  const ids = { shadow: `sh${uid}`, clip: `cl${uid}`, shade: `sd${uid}`, mono: `sd${uid}m` };
   return (
     <svg
       viewBox={`0 0 ${scene.width} ${scene.height}`}
@@ -118,6 +119,13 @@ export const PageView = memo(function PageView({ page, theme, photos, variant = 
       <defs>
         <filter id={ids.shadow} x="-10%" y="-10%" width="120%" height="125%">
           <feDropShadow dx="0" dy="0.5" stdDeviation="0.7" floodColor="#3a2a1a" floodOpacity="0.22" />
+        </filter>
+        <linearGradient id={`${ids.shade}u`} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.5" />
+        </linearGradient>
+        <filter id={`${ids.shade}m`} colorInterpolationFilters="sRGB">
+          <feColorMatrix type="saturate" values="0" />
         </filter>
         <linearGradient id={ids.shade} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#000" stopOpacity="0" />

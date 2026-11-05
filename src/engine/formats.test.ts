@@ -15,7 +15,7 @@ import { bookViews, pageLabels } from './book';
 import { applyTheme, usedPhotoIds } from './edit';
 import { generateAlbum } from './generate';
 
-const FORMATS: BookFormat[] = ['portrait', 'landscape', 'square'];
+const FORMATS: BookFormat[] = ['portrait', 'landscape', 'square', 'pocket'];
 const measure = (text: string, font: string) => text.length * Number(/(\d+(?:\.\d+)?)px/.exec(font)![1]) * 0.5;
 
 const answers = (over: Partial<Answers> = {}): Answers => ({
@@ -36,7 +36,7 @@ describe('book shapes', () => {
   it('gives every style a cover, chapter, closing and 1–6 photo pages in every shape', () => {
     for (const t of THEMES) for (const f of FORMATS) {
       for (const kind of ['cover', 'chapter', 'closing'] as const) expect(layoutsFor(t.id, kind, undefined, f).length, `${t.id}/${f}/${kind}`).toBeGreaterThan(0);
-      for (let n = 1; n <= 6; n++) expect(layoutsFor(t.id, 'photos', n, f).filter((l) => !l.spread).length, `${t.id}/${f}/${n}`).toBeGreaterThan(0);
+      for (let n = 1; n <= (t.singlePhotoPages ? 1 : 6); n++) expect(layoutsFor(t.id, 'photos', n, f).filter((l) => !l.spread).length, `${t.id}/${f}/${n}`).toBeGreaterThan(0);
     }
   });
 
@@ -136,5 +136,58 @@ describe('poster covers (Bold Graphic)', () => {
     const back = applyTheme(gallery, 'graphic', photos(12), { posterText: { title: 'Sicily', subtitle: 'Travel', date: '' } });
     expect(getLayout(back.pages[0].layoutId).poster).toBe(true);
     expect(back.pages[0].text.title).toBe('Sicily');
+  });
+});
+
+describe('professional extras', () => {
+  it('adds journal pages (heading + the photos’ own captions) only where there are captions', () => {
+    const captioned = photos(24).map((p, i) => (i % 3 === 0 ? { ...p, caption: `Note ${i}` } : p));
+    const album = generateAlbum({ project: project('gallery', 'landscape'), photos: captioned, seed: 5 });
+    const journals = album.pages.filter((p) => getLayout(p.layoutId).needsHeading);
+    expect(journals.length).toBeGreaterThan(0);
+    for (const j of journals) expect(j.text.heading).toBeTruthy();
+    const plain = generateAlbum({ project: project('gallery', 'landscape'), photos: photos(24), seed: 5 });
+    expect(plain.pages.some((p) => getLayout(p.layoutId).needsHeading)).toBe(false);
+  });
+
+  it('still adds journal pages when sections have no titles (quick albums), headed with typed words only', () => {
+    const p = project('gallery', 'landscape');
+    const quick = { ...p, quick: true, plan: [], chapters: [] };
+    const captioned = photos(15).map((x, i) => (i % 5 === 0 ? { ...x, caption: `Note ${i}`, takenAt: undefined } : { ...x, takenAt: undefined }));
+    const album = generateAlbum({ project: quick, photos: captioned, seed: 3 });
+    const journals = album.pages.filter((pg) => getLayout(pg.layoutId).needsHeading);
+    expect(journals.length).toBeGreaterThan(0);
+    for (const j of journals) expect(['Summer in Sicily']).toContain(j.text.heading);
+  });
+
+  it('does not repeat the place under the title when they are the same words', () => {
+    const p = project('gallery', 'landscape');
+    const album = generateAlbum({ project: { ...p, answers: { ...p.answers, title: 'Sicily, Italy' } }, photos: photos(12), seed: 1 });
+    expect(album.pages[0].text.subtitle ?? '').toBe('');
+  });
+
+  it('makes brag books: every inside page one edge-to-edge photo, no chapter pages', () => {
+    const album = generateAlbum({ project: project('brag', 'pocket'), photos: photos(18), seed: 1 });
+    const inside = album.pages.slice(1, -1);
+    for (const p of inside) {
+      const l = getLayout(p.layoutId);
+      expect(l.kind).toBe('photos');
+      expect(l.photos).toHaveLength(1);
+      expect(l.bleed).toBe(true);
+    }
+    expect(usedPhotoIds(album).size).toBe(18);
+  });
+
+  it('uses the user’s own cover words on posters', () => {
+    const p = project('graphic', 'portrait');
+    const album = generateAlbum({ project: { ...p, answers: { ...p.answers, tagline: 'Dolce' } }, photos: photos(8), seed: 1 });
+    expect(album.pages[0].text).toMatchObject({ title: 'Sicily', subtitle: 'Dolce' });
+  });
+
+  it('draws black-and-white photos when asked', () => {
+    const l = PRO_LAYOUTS.find((x) => x.id === 'pro-square-cover-corner')!;
+    const scene = buildScene({ page: { id: 'c', layoutId: l.id, photos: [{ photoId: 'ph0', mono: true }], text: { title: 'Spring in New York City' } }, theme: THEMES.find((t) => t.id === 'gallery')!, photos: new Map(photos(1).map((x) => [x.id, x])), measure, format: 'square' });
+    const frame = scene.ops.find((o) => o.t === 'frame');
+    expect(frame && 'mono' in frame && frame.mono).toBe(true);
   });
 });

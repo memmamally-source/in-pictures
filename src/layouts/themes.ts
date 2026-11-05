@@ -56,7 +56,9 @@ export interface ThemeDef {
   /** How strongly the generator favours two-page spreads (0 = never). */
   spreadBias?: number;
   /** Shape suggested with this style. */
-  defaultFormat?: 'portrait' | 'landscape' | 'square';
+  defaultFormat?: 'portrait' | 'landscape' | 'square' | 'pocket';
+  /** Brag book: every page is one photo, edge to edge, and there are no chapter pages. */
+  singlePhotoPages?: boolean;
 }
 
 /** Which font each text role uses. */
@@ -81,6 +83,34 @@ const POSTER = 'Anton';
 const SCRIPT = 'Great Vibes';
 
 export const THEMES: ThemeDef[] = [
+  {
+    id: 'brag',
+    name: 'Brag Book',
+    description: 'A little book of big photos: every page one photo, edge to edge, like a pocket brag book. Nothing but the pictures.',
+    colors: { page: '#FFFFFF', chapterPage: '#111111', ink: '#141414', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#141414', mat: '#FFFFFF', pattern: '#EEEEEE' },
+    chapterInk: { ink: '#FFFFFF', muted: '#BDBDBD', accent: '#BDBDBD', accent2: '#FFFFFF', pattern: '#2A2A2A' },
+    fonts: {
+      title: { family: SANS, weight: 600, upper: true, tracking: 0.12, lineHeight: 1.1, scale: 0.7 },
+      heading: { family: SANS, weight: 600, upper: true, tracking: 0.12, lineHeight: 1.1, scale: 0.7 },
+      body: { family: SANS, weight: 400, lineHeight: 1.45, scale: 0.9 },
+      caption: { family: SANS, weight: 400, lineHeight: 1.4, scale: 0.82 },
+      label: { family: SANS, weight: 500, upper: true, tracking: 0.28, lineHeight: 1.2, scale: 0.8 },
+    },
+    background: 'plain',
+    chapterBackground: 'plain',
+    frame: 'none',
+    shape: 'rect',
+    radius: 0,
+    tilt: 0,
+    shadow: false,
+    pageDecor: [[]],
+    moods: ['calm'],
+    pro: true,
+    coverStyle: 'photo',
+    spreadBias: 0,
+    defaultFormat: 'pocket',
+    singlePhotoPages: true,
+  },
   {
     id: 'gallery',
     name: 'Gallery',

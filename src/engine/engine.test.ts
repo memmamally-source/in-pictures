@@ -60,7 +60,7 @@ describe('layout library', () => {
   it('gives every theme a cover, chapter, closing and a layout for 1–6 photos', () => {
     for (const t of THEMES) {
       for (const kind of ['cover', 'chapter', 'closing'] as const) expect(layoutsFor(t.id, kind).length, `${t.id} ${kind}`).toBeGreaterThan(0);
-      for (let n = 1; n <= 6; n++) expect(layoutsFor(t.id, 'photos', n).length, `${t.id} ${n}`).toBeGreaterThan(0);
+      for (let n = 1; n <= (t.singlePhotoPages ? 1 : 6); n++) expect(layoutsFor(t.id, 'photos', n).length, `${t.id} ${n}`).toBeGreaterThan(0);
     }
   });
 

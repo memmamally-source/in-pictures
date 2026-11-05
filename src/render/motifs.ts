@@ -105,6 +105,21 @@ const MOTIFS: Record<string, Part[]> = {
     { d: C(62, 56, 20), stroke: '#E9C86A', sw: 6 },
     { d: 'M40 30L36 24L44 24Z', fill: '#FFFFFF' },
   ],
+  boat: [
+    { d: 'M50 10L50 66', stroke: '#2B2B2B', sw: 2.4 },
+    { d: 'M52 14L80 62L52 62Z', fill: '#FFFFFF' },
+    { d: 'M48 20L26 62L48 62Z', fill: '#F26B4F' },
+    { d: 'M16 68L84 68L74 82L26 82Z', fill: '#1E3A5F' },
+    { d: 'M6 88Q18 84 30 88T54 88T78 88T96 88', stroke: '#4B8FC6', sw: 3 },
+  ],
+  lighthouse: [
+    { d: 'M40 30L60 30L66 88L34 88Z', fill: '#FFFFFF' },
+    { d: 'M38.6 44L61.4 44L62.6 54L37.4 54ZM36.5 64L63.5 64L64.7 74L35.3 74Z', fill: '#E04A5F' },
+    { d: R(42, 18, 16, 12), fill: '#F7D046' },
+    { d: 'M40 18L50 8L60 18Z', fill: '#2B2B2B' },
+    { d: 'M58 22L94 12L94 30Z', fill: '#F7D046', opacity: 0.55 },
+    { d: 'M26 88L74 88L80 94L20 94Z', fill: '#55504A' },
+  ],
   balloon: [
     { d: 'M34 54Q38 74 50 92M62 50Q60 72 50 92M50 44Q50 70 50 92', stroke: '#55504A', sw: 1.2 },
     { d: E(34, 36, 13, 16), fill: '#E04A5F' },
@@ -163,7 +178,9 @@ export function chooseMotif(occasionId: string, place = '', title = ''): string 
   const rules: [RegExp, string][] = [
     [/sicil|amalfi|sorrento|capri|positano|lemon|menton|limoncello/, 'lemon'],
     [/lisbon|porto|san francisco|tram|budapest|prague/, 'tram'],
-    [/bali|thailand|phuket|caribbean|hawaii|maldives|mauritius|tropic|miami|zanzibar|fiji|cancun|jamaica|seychelles/, 'palm'],
+    [/lighthouse|maine|cape cod|brittany|nova scotia/, 'lighthouse'],
+    [/sail|yacht|regatta|harbou?r|marina|boat/, 'boat'],
+    [/bali|thailand|phuket|caribbean|bahamas|hawaii|maldives|mauritius|tropic|miami|zanzibar|fiji|cancun|jamaica|seychelles|barbados|key west/, 'palm'],
     [/greece|santorini|mykonos|crete|ibiza|mallorca|majorca|beach|coast|island|riviera|algarve|seaside|cornwall|croatia/, 'sunset'],
     [/alps|ski|mountain|swiss|switzerland|norway|iceland|patagonia|rockies|himalaya|dolomit|lake district|highlands|fuji/, 'mountain'],
     [/new york|london|tokyo|paris|city|chicago|dubai|singapore|hong kong|berlin|seoul/, 'skyline'],

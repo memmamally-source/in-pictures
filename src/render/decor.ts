@@ -196,6 +196,8 @@ export function decorPaths(kind: DecorKind, r: Rect): PathPart[] {
     }
     case 'shade-bottom':
       return [{ d: rect(x, y, w, h), fill: 'shade' }];
+    case 'shade-top':
+      return [{ d: rect(x, y, w, h), fill: 'shade-top' }];
     case 'motif':
       return []; // drawn by the scene from the page's chosen illustration (motifs.ts)
   }

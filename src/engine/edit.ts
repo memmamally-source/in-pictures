@@ -110,6 +110,10 @@ export function setFocal(album: Album, index: number, slot: number, focal: Focal
   return touch(album, index, (p) => ({ ...p, photos: p.photos.map((s, i) => (i === slot ? { ...s, focal } : s)) }));
 }
 
+export function setMono(album: Album, index: number, slot: number, mono: boolean): Album {
+  return touch(album, index, (p) => ({ ...p, photos: p.photos.map((s, i) => (i === slot ? { ...s, mono: mono || undefined } : s)) }));
+}
+
 export function setText(album: Album, index: number, key: string, value: string): Album {
   return touch(album, index, (p) => ({ ...p, text: { ...p.text, [key]: value } }));
 }

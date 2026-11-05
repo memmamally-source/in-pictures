@@ -248,6 +248,8 @@ export interface RankContext {
   rand: () => number;
   /** Book shape (default portrait). */
   format?: BookFormat;
+  /** The section's heading; journal layouts are only used when there is one. */
+  heading?: string;
 }
 
 export interface Candidate {
@@ -260,6 +262,7 @@ export interface Candidate {
 export function rankLayouts(kind: LayoutDef['kind'], group: Photo[], ctx: RankContext): Candidate[] {
   const theme = getTheme(ctx.themeId);
   return layoutsFor(ctx.themeId, kind, group.length, ctx.format ?? 'portrait')
+    .filter((layout) => !layout.needsHeading || !!ctx.heading)
     .map((layout) => {
       const assignment = assign(layout, group, ctx.themeId);
       let cost = assignment.cost + captionCost(layout, group, assignment.order) + (1 - (layout.weight ?? 1)) * 2;
@@ -356,7 +359,7 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   const format: BookFormat = project.format ?? 'portrait';
   const a = project.answers;
   const rand = mulberry32(seed * 2654435761 + project.id.length);
-  const ctx: RankContext = { themeId, density: DENSITY[a.length], rand, format };
+  const ctx: RankContext = { themeId, density: theme.singlePhotoPages ? 1 : DENSITY[a.length], rand, format };
   const proSet = theme.pro || format !== 'portrait';
   const pages: AlbumPage[] = [];
   let n = 0;
@@ -372,7 +375,8 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
 
   // Cover.
   const cover = sorted.find((p) => p.id === project.coverPhotoId) ?? sorted.find((p) => p.favourite) ?? sorted[0];
-  const coverText = { title: a.title || 'Our album', subtitle: a.location?.trim() ?? '', date: dateLabel };
+  const loc = a.location?.trim() ?? '';
+  const coverText = { title: a.title || 'Our album', subtitle: sameWords(loc, a.title) ? '' : loc, date: dateLabel };
   const poster = theme.coverStyle === 'poster';
   if (poster) {
     pages.push({
@@ -402,7 +406,8 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
 
   // Chapter openers: only for real sections, only the larger ones, within a limit.
   const eligible = sections.length >= 2 ? sections.filter((s) => s.title && s.photos.length >= 3) : [];
-  const chosen = new Set([...eligible].sort((x, y) => y.photos.length - x.photos.length).slice(0, CHAPTER_LIMIT[a.length]));
+  const chapterLimit = theme.singlePhotoPages ? 0 : CHAPTER_LIMIT[a.length];
+  const chosen = new Set([...eligible].sort((x, y) => y.photos.length - x.photos.length).slice(0, chapterLimit));
   const chapterLayouts = layoutsFor(themeId, 'chapter', undefined, format);
   const plainChapter = proSet ? `pro-${format}-chapter-text` : 'chapter-centered';
   // The cover is page 0, a right-hand page; the next page is on the left.
@@ -430,8 +435,10 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
         push({ id: id(), layoutId: pick.id, photos: [], text, chapterId: section.chapterId });
       }
     }
-    for (const pg of paginate(body, ctx, onLeft)) {
-      push({ id: id(), layoutId: pg.layout.id, photos: pg.slots, text: {}, chapterId: section.chapterId ?? `section-${si}` });
+    // Journal pages need a heading: the section's own title, its dates, or the album's title (never invented words).
+    const heading = section.title || section.dateLabel || coverText.title || '';
+    for (const pg of paginate(body, { ...ctx, heading }, onLeft)) {
+      push({ id: id(), layoutId: pg.layout.id, photos: pg.slots, text: pg.layout.needsHeading ? { heading } : {}, chapterId: section.chapterId ?? `section-${si}` });
     }
   });
 
@@ -452,10 +459,20 @@ export function coverWords(project: GenerateInput['project'], photos: Photo[], p
   const a = project.answers;
   const raw = albumDateLabel(project, photos);
   const date = raw && raw !== a.title.trim() ? raw : '';
-  if (!poster) return { title: a.title || 'Our album', subtitle: a.location?.trim() ?? '', date };
+  const loc = a.location?.trim() ?? '';
+  if (!poster) return { title: a.title || 'Our album', subtitle: sameWords(loc, a.title) ? '' : loc, date };
   const place = a.location?.split(',')[0].trim();
   const occasionName = project.occasionId ? getOccasion(project.occasionId).name : '';
-  return place ? { title: place, subtitle: a.title === place ? '' : shortOccasion(occasionName), date } : { title: a.title || 'Our album', subtitle: '', date };
+  const tagline = a.tagline?.trim();
+  return place
+    ? { title: place, subtitle: tagline || (a.title === place ? '' : shortOccasion(occasionName)), date }
+    : { title: a.title || 'Our album', subtitle: tagline ?? '', date };
+}
+
+/** True when two phrases match ignoring case and punctuation. */
+function sameWords(x: string, y: string): boolean {
+  const n = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  return !!n(x) && n(x) === n(y);
 }
 
 /** "International travel" → "Travel"; short occasion names stay as they are. */

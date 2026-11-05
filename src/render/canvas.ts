@@ -28,9 +28,9 @@ function drawParts(ctx: CanvasRenderingContext2D, parts: ResolvedPart[]) {
     ctx.globalAlpha = p.opacity ?? 1;
     if (p.shade) {
       const box = boundsOf(p.d);
-      const g = ctx.createLinearGradient(0, box.y0, 0, box.y1);
+      const g = p.shade === 'up' ? ctx.createLinearGradient(0, box.y1, 0, box.y0) : ctx.createLinearGradient(0, box.y0, 0, box.y1);
       g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,0.55)');
+      g.addColorStop(1, p.shade === 'up' ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.55)');
       ctx.fillStyle = g;
       ctx.fill(path);
     } else if (p.fill) {
@@ -56,6 +56,26 @@ function boundsOf(d: string): { y0: number; y1: number } {
 }
 
 /** `bleed` (page units) adds that much paper on every side, for print. Build the scene with the same bleed. */
+/** The cropped part of an image in black and white (pixel by pixel, so it works in every browser). */
+function grayscale(img: CanvasImageSource & { width: number; height: number }, crop: { sx: number; sy: number; sw: number; sh: number }): HTMLCanvasElement | null {
+  const w = Math.max(1, Math.round(crop.sw * img.width));
+  const h = Math.max(1, Math.round(crop.sh * img.height));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.drawImage(img, crop.sx * img.width, crop.sy * img.height, w, h, 0, 0, w, h);
+  const data = g.getImageData(0, 0, w, h);
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const y = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    d[i] = d[i + 1] = d[i + 2] = y;
+  }
+  g.putImageData(data, 0, 0);
+  return c;
+}
+
 export async function renderScene(scene: Scene, pxPerUnit: number, load: ImageLoader, bleed = 0): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   canvas.width = Math.round((scene.width + 2 * bleed) * pxPerUnit);
@@ -93,7 +113,10 @@ export async function renderScene(scene: Scene, pxPerUnit: number, load: ImageLo
           const { crop } = op.photo;
           ctx.save();
           ctx.clip(new Path2D(op.clip));
-          ctx.drawImage(img, crop.sx * img.width, crop.sy * img.height, crop.sw * img.width, crop.sh * img.height, op.inner.x, op.inner.y, op.inner.w, op.inner.h);
+          const src = op.mono ? grayscale(img, crop) : null;
+          if (src) ctx.drawImage(src, op.inner.x, op.inner.y, op.inner.w, op.inner.h);
+          else ctx.drawImage(img, crop.sx * img.width, crop.sy * img.height, crop.sw * img.width, crop.sh * img.height, op.inner.x, op.inner.y, op.inner.w, op.inner.h);
+          if (src) src.width = src.height = 0;
           ctx.restore();
         }
         if (op.over) drawParts(ctx, op.over);

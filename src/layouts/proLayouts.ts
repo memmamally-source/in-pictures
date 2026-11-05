@@ -118,6 +118,33 @@ function build(f: BookFormat): LayoutDef[] {
     });
   }
 
+  // Journal pages: a heading and the photos' captions beside them (only used when captions exist).
+  const j = { ...base, kind: 'photos' as const, captions: 'required' as const, needsHeading: true };
+  const cap = (i: number, r: Rect, extra: Partial<TextBox> = {}) => textBox(`caption${i}`, 'caption', r, 3, { photo: i, maxLines: 4, align: 'left', ...extra });
+  const heading = (r: Rect, size = 6) => textBox('heading', 'heading', r, size, { align: 'left', maxLines: 1 });
+  if (f === 'landscape') {
+    out.push({ ...j, id: `pro-${f}-journal-one`, name: 'Journal · photo and story', bleed: true,
+      photos: [{ x: 0, y: 0, w: 54, h: H, frame: 'none', shape: 'rect', hero: true }],
+      texts: [heading({ x: 60, y: 10, w: 34, h: 10 }), cap(0, { x: 60, y: 24, w: 34, h: H - 34 }, { role: 'body', size: 3.4, maxLines: 9 })] });
+  } else {
+    out.push({ ...j, id: `pro-${f}-journal-one`, name: 'Journal · photo and story', bleed: true,
+      photos: [{ x: 0, y: 0, w: 100, h: H * 0.6, frame: 'none', shape: 'rect', hero: true }],
+      texts: [heading({ x: 8, y: H * 0.6 + 5, w: 84, h: 9 }), cap(0, { x: 8, y: H * 0.6 + 16, w: 84, h: H * 0.4 - 22 }, { role: 'body', size: 3.4, maxLines: 6 })] });
+  }
+  {
+    const top = 21;
+    const capH = 9;
+    const ph = H - top - capH - 10;
+    const two = [0, 1].map((i) => ({ x: 8 + i * 43, y: top, w: 41, h: ph }));
+    out.push({ ...j, id: `pro-${f}-journal-two`, name: 'Journal · two with notes',
+      photos: two.map((r, i) => ({ ...r, hero: i === 0 })),
+      texts: [heading({ x: 8, y: 7, w: 84, h: 10 }), ...two.map((r, i) => cap(i, { x: r.x, y: r.y + r.h + 2, w: r.w, h: capH }, { maxLines: 2 }))] });
+    const three = [0, 1, 2].map((i) => ({ x: 8 + i * 28.67, y: top, w: 26.67, h: ph }));
+    out.push({ ...j, id: `pro-${f}-journal-three`, name: 'Journal · three with notes',
+      photos: three.map((r, i) => ({ ...r, hero: i === 1 })),
+      texts: [heading({ x: 8, y: 7, w: 84, h: 10 }), ...three.map((r, i) => cap(i, { x: r.x, y: r.y + r.h + 2, w: r.w, h: capH }, { maxLines: 2, size: 2.7 }))] });
+  }
+
   // Covers.
   const titleSize = f === 'landscape' ? 7 : 8;
   out.push({
@@ -127,6 +154,15 @@ function build(f: BookFormat): LayoutDef[] {
     texts: [
       textBox('title', 'title', { x: 8, y: H - 26, w: 84, h: 14 }, titleSize, { color: 'onPhoto', maxLines: 2, align: 'left' }),
       textBox('subtitle', 'subtitle', { x: 8, y: H - 11, w: 84, h: 5 }, 2.6, { color: 'onPhoto', align: 'left' }),
+    ],
+  });
+  out.push({
+    ...base, id: `pro-${f}-cover-corner`, name: 'Photo cover, small title', kind: 'cover', bleed: true,
+    photos: [{ x: 0, y: 0, w: 100, h: H, frame: 'none', shape: 'rect', hero: true }],
+    decor: [{ kind: 'shade-top', x: 0, y: 0, w: 100, h: H * 0.32 }],
+    texts: [
+      textBox('title', 'title', { x: 40, y: 7, w: 53, h: 10 }, 5.2, { color: 'onPhoto', maxLines: 2, align: 'right' }),
+      textBox('subtitle', 'subtitle', { x: 40, y: 18, w: 53, h: 5 }, 2.2, { color: 'onPhoto', align: 'right' }),
     ],
   });
   out.push({
@@ -186,7 +222,7 @@ function build(f: BookFormat): LayoutDef[] {
   return out;
 }
 
-export const PRO_LAYOUTS: LayoutDef[] = (['portrait', 'landscape', 'square'] as BookFormat[]).flatMap(build);
+export const PRO_LAYOUTS: LayoutDef[] = (['portrait', 'landscape', 'square', 'pocket'] as BookFormat[]).flatMap(build);
 
 /** Decorations on spreads and non-portrait pages are positioned in portrait units; this maps them. */
 export function scaleDecor(d: DecorItem, w: number, h: number): DecorItem {

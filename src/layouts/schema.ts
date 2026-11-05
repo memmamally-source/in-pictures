@@ -21,6 +21,7 @@ export const FORMATS: Record<BookFormat, { label: string; inches: { w: number; h
   portrait: { label: 'Portrait', inches: { w: 8, h: 10 }, help: '8 × 10 in — classic photo book' },
   landscape: { label: 'Landscape', inches: { w: 11, h: 8.5 }, help: '11 × 8.5 in — made for travel and spreads' },
   square: { label: 'Square', inches: { w: 12, h: 12 }, help: '12 × 12 in — the wedding-album size' },
+  pocket: { label: 'Pocket', inches: { w: 6, h: 6 }, help: '6 × 6 in — a little brag book' },
 };
 
 /** Page height in units for a shape. */
@@ -78,7 +79,9 @@ export type DecorKind =
   | 'divider' | 'flourish' | 'double-border' | 'corners' | 'airmail' | 'confetti' | 'shade-bottom'
   | 'dots-row' | 'sun' | 'strip' | 'rule' | 'washi' | 'leaf' | 'scallop-border'
   /** A flat illustration chosen per album (page.motif), for poster covers. */
-  | 'motif';
+  | 'motif'
+  /** Darkening at the top of a photo, for a title over it. */
+  | 'shade-top';
 export type DecorColor = 'accent' | 'accent2' | 'ink' | 'muted' | 'paper' | 'mat';
 
 export interface DecorItem extends Rect {
@@ -118,4 +121,6 @@ export interface LayoutDef {
   pro?: boolean;
   /** For covers: no photo, a big title and an illustration (Bold Graphic). */
   poster?: boolean;
+  /** Journal page: shows the section's heading, so it's only used where there is one. */
+  needsHeading?: boolean;
 }

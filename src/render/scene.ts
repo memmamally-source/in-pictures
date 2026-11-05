@@ -25,7 +25,7 @@ export interface ResolvedPart {
   d: string;
   fill?: string;
   /** Vertical gradient from transparent to dark, for text over photos. */
-  shade?: boolean;
+  shade?: 'down' | 'up';
   stroke?: string;
   strokeWidth?: number;
   opacity?: number;
@@ -53,6 +53,8 @@ export interface FrameOp {
   shadow: boolean;
   xf?: Xform;
   photo: { id: string; aspect: number; crop: CropRect } | null;
+  /** Draw the photo in black and white. */
+  mono?: boolean;
   /** Mount corners and similar drawn over the picture. */
   over?: ResolvedPart[];
 }
@@ -130,7 +132,8 @@ export function buildScene({ page, theme, photos, measure, bleed = 0, format = '
     parts.map((p) => {
       const pick = (v?: string) =>
         v === 'color' ? color : v === 'pattern' ? palette.pattern : v === 'accent' ? palette.accent : v === 'accent2' ? palette.accent2 : v;
-      return { d: p.d, fill: p.fill === 'shade' ? undefined : pick(p.fill), shade: p.fill === 'shade', stroke: pick(p.stroke), strokeWidth: p.strokeWidth, opacity: p.opacity };
+      const shade = p.fill === 'shade' ? 'down' : p.fill === 'shade-top' ? 'up' : undefined;
+      return { d: p.d, fill: shade ? undefined : pick(p.fill), shade, stroke: pick(p.stroke), strokeWidth: p.strokeWidth, opacity: p.opacity };
     });
 
   const ops: Op[] = [];
@@ -160,8 +163,9 @@ export function buildScene({ page, theme, photos, measure, bleed = 0, format = '
   };
 
   // Shading such as 'shade-bottom' sits above photos and below text.
-  const shade = decor.filter((d) => d.kind === 'shade-bottom');
-  const decorNoShade = decor.filter((d) => d.kind !== 'shade-bottom');
+  const isShade = (d: { kind: string }) => d.kind === 'shade-bottom' || d.kind === 'shade-top';
+  const shade = decor.filter(isShade);
+  const decorNoShade = decor.filter((d) => !isShade(d));
   decor.length = 0;
   decor.push(...decorNoShade);
 
@@ -200,6 +204,7 @@ export function buildScene({ page, theme, photos, measure, bleed = 0, format = '
       shadow: theme.shadow && style !== 'none',
       xf,
       photo,
+      mono: !!slot?.mono,
       over,
     });
     frameBoxes.push({ box: frame, inner, xf, style });

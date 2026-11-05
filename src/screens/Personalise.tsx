@@ -226,7 +226,7 @@ export function Personalise({ edit }: { edit?: boolean }) {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5">
               <span>
                 <span className="block text-[15px] font-medium">More options</span>
-                <span className="block text-xs text-muted">Names, mood and a line for the last page — all optional.</span>
+                <span className="block text-xs text-muted">Names, mood, cover words and a line for the last page — all optional.</span>
               </span>
               <Icon name="next" className="shrink-0 transition group-open:rotate-90" />
             </summary>
@@ -245,7 +245,10 @@ export function Personalise({ edit }: { edit?: boolean }) {
                 ))}
               </div>
             </Field>
-            <Field label="A line for the last page (optional)" htmlFor="note" hint="Your words, printed on the closing page. Leave blank for none.">
+            <Field label="Cover words (optional)" htmlFor="tagline" hint="Printed under the place name on poster-style covers — e.g. Dolce, Saudade, Forever.">
+            <input id="tagline" className={inputClass} value={a.tagline ?? ''} maxLength={30} onChange={(e) => set({ tagline: e.target.value || undefined })} autoComplete="off" />
+          </Field>
+          <Field label="A line for the last page (optional)" htmlFor="note" hint="Your words, printed on the closing page. Leave blank for none.">
               <textarea id="note" rows={2} className={inputClass} maxLength={240} value={a.closingNote ?? ''} onChange={(e) => set({ closingNote: e.target.value })} />
             </Field>
 

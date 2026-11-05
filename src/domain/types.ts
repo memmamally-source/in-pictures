@@ -5,8 +5,8 @@
  * blob store, keyed by photo id.
  */
 
-export type ThemeId = 'minimal' | 'scrapbook' | 'polaroid' | 'romantic' | 'travel' | 'heritage' | 'gallery' | 'graphic';
-export type BookFormat = 'portrait' | 'landscape' | 'square';
+export type ThemeId = 'minimal' | 'scrapbook' | 'polaroid' | 'romantic' | 'travel' | 'heritage' | 'gallery' | 'graphic' | 'brag';
+export type BookFormat = 'portrait' | 'landscape' | 'square' | 'pocket';
 export type GroupType = 'solo' | 'couple' | 'family' | 'friends' | 'group';
 export type Mood = 'joyful' | 'romantic' | 'calm' | 'adventurous' | 'nostalgic' | 'elegant' | 'playful';
 /** Album size: how many photo ideas the checklist offers (see TIERS in planner.ts). */
@@ -36,6 +36,8 @@ export interface Answers {
   mode: StartMode;
   /** An optional line for the closing page, written by the user. */
   closingNote?: string;
+  /** A word or two for poster covers, chosen by the user (e.g. "Dolce"). */
+  tagline?: string;
   /** Occasion-specific answers (see OccasionDef.questions.extras). */
   extras: Record<string, string | boolean>;
 }
@@ -99,6 +101,8 @@ export interface Focal {
 export interface PhotoSlot {
   photoId: string | null;
   focal?: Focal;
+  /** Shown in black and white. */
+  mono?: boolean;
 }
 
 export interface AlbumPage {

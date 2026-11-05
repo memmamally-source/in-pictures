@@ -4,7 +4,7 @@ import { FORMATS } from '@/layouts/schema';
 /** Portrait / Landscape / Square, each drawn to scale. */
 export function ShapePicker({ value, onChange }: { value: BookFormat; onChange: (f: BookFormat) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Book shape">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Book shape">
       {(Object.keys(FORMATS) as BookFormat[]).map((f) => {
         const { w, h } = FORMATS[f].inches;
         const s = 34 / Math.max(w, h);

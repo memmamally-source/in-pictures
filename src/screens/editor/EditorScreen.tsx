@@ -6,7 +6,7 @@ import { Thumb } from '@/components/Thumb';
 import { Button, ButtonLink, Confirm, IconButton, inputClass } from '@/components/ui';
 import type { Album, Photo, Project } from '@/domain/types';
 import {
-  addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
+  addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setMono, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
 } from '@/engine/edit';
 import { pageLabels } from '@/engine/book';
 import { curatePhotos } from '@/engine/curate';
@@ -270,6 +270,18 @@ export function EditorScreen() {
                   <Button size="sm" variant="secondary" icon="close" disabled={!slotPhoto} onClick={() => set(clearSlot(album, idx, slot))}>
                     Remove
                   </Button>
+                  {slotPhoto && (
+                    <Button
+                      size="sm"
+                      variant={page.photos[slot]?.mono ? 'primary' : 'secondary'}
+                      icon="palette"
+                      className="col-span-2"
+                      aria-pressed={!!page.photos[slot]?.mono}
+                      onClick={() => set(setMono(album, idx, slot, !page.photos[slot]?.mono))}
+                    >
+                      {page.photos[slot]?.mono ? 'Black & white: on' : 'Black & white'}
+                    </Button>
+                  )}
                   {slotPhoto && (
                     <Button
                       size="sm"
