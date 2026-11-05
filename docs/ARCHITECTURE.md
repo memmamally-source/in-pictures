@@ -133,7 +133,7 @@ The editor keeps up to 50 snapshots of the album and its style; typing in one fi
 | Reminders | Plan items already have chapters/dates; notifications need a service worker push or a native wrapper. |
 | Premium templates | Layouts and themes are data. A pack is a JSON module of `LayoutDef[]` / `ThemeDef[]` gated by an entitlement that the server verifies. |
 | Printing partners | See printing limitations above; add a `PrintProvider` interface beside `export/pdf.ts`. |
-| More formats (square books, landscape, slideshows) | Page units are fixed at 100 × 125 today. A format would add its own layout set and `PAGE_H`, which the scene builder and renderers already take from the schema. |
+| More formats (slideshows, other print sizes) | Shapes are data (`FORMATS` in `schema.ts`) and the professional layouts are generated per shape, so a new size is one entry plus its print size. |
 | iOS / Android apps | Wrap with Capacitor (keeps IndexedDB and the file input) or port the pure modules (`templates`, `layouts`, `engine`, `render/scene`) to React Native; they have no DOM dependencies. |
 
 ## 7. Known limitations
