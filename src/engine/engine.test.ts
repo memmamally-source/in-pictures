@@ -264,6 +264,15 @@ describe('album generation', () => {
   });
 });
 
+describe('titles from dates', () => {
+  it('doesn’t repeat the date when the title already is the date', () => {
+    const ph = photos(6, (i) => ({ takenAt: `2026-06-0${1 + (i % 3)}T10:00:00` }));
+    const album = generateAlbum({ project: project({ answers: answers({ title: '1–3 June 2026', location: '' }) }), photos: ph, seed: 1 });
+    expect(album.pages[0].text.title).toBe('1–3 June 2026');
+    expect(album.pages[0].text.date).toBe('');
+  });
+});
+
 describe('editing', () => {
   const ph = photos(20);
   const base = () => generateAlbum({ project: project(), photos: ph, seed: 1 });

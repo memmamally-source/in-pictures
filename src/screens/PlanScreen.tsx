@@ -19,6 +19,8 @@ export const CATEGORY_LABELS: Record<ShotCategory, string> = {
   details: 'Details',
   moments: 'Memories & moments',
 };
+/** Ideas shown per group before "Show more". */
+const SHOWN = 6;
 const ORDER: ShotCategory[] = ['places', 'people', 'moments', 'food', 'details'];
 const CATEGORY_DOT: Record<ShotCategory, string> = { places: 'bg-[#2ec4b6]', people: 'bg-[#ff5a6e]', moments: 'bg-pop', food: 'bg-[#ffa21f]', details: 'bg-[#3d8bff]' };
 
@@ -28,6 +30,15 @@ export function PlanScreen() {
   const updateProject = useProject((s) => s.updateProject);
   const [editing, setEditing] = useState<PlanItem | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggleGroup = (key: string) => setExpanded((e) => {
+    const n = new Set(e);
+    if (n.has(key)) n.delete(key);
+    else n.add(key);
+    return n;
+  });
+  const isTip = (i: PlanItem) => !!i.shotId?.startsWith('craft-');
+  const tips = project.plan.filter((i) => isTip(i) && !i.skipped);
   const occasion = getOccasion(project.occasionId);
 
   const attached = useMemo(() => {
@@ -71,8 +82,13 @@ export function PlanScreen() {
       </div>
 
       {ORDER.map((cat) => {
-        const items = project.plan.filter((i) => i.category === cat && !i.skipped);
-        if (!items.length) return null;
+        const all = project.plan
+          .filter((i) => i.category === cat && !i.skipped && !isTip(i))
+          .sort((a, b) => (a.priority ?? 2) - (b.priority ?? 2));
+        if (!all.length) return null;
+        // The most important ideas come first; the rest fold away until asked for.
+        const open = expanded.has(cat);
+        const items = open ? all : all.slice(0, SHOWN);
         return (
           <section key={cat} className="mt-8">
             <h2 className="flex items-center gap-2 font-display text-xl">
@@ -84,9 +100,33 @@ export function PlanScreen() {
                 <PlanRow key={item.id} item={item} photoIds={attached[item.id] ?? []} onToggle={() => setItem(item.id, { done: !item.done })} onEdit={() => setEditing(item)} onSkip={() => setItem(item.id, { skipped: true })} />
               ))}
             </ul>
+            {all.length > SHOWN && (
+              <button type="button" onClick={() => toggleGroup(cat)} className="mt-2 w-full rounded-2xl py-2.5 text-sm font-medium text-pop hover:bg-pop-soft">
+                {open ? 'Show fewer' : `Show ${all.length - SHOWN} more idea${all.length - SHOWN === 1 ? '' : 's'}`}
+              </button>
+            )}
           </section>
         );
       })}
+
+      {tips.length > 0 && (
+        <section className="mt-8 rounded-3xl bg-white/70 p-4 ring-1 ring-line">
+          <button type="button" onClick={() => toggleGroup('tips')} className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={expanded.has('tips')}>
+            <span>
+              <span className="block font-display text-xl">Photography tips</span>
+              <span className="block text-sm text-muted">{tips.length} ideas for angles, light and moments that make an album feel rich. Optional.</span>
+            </span>
+            <Icon name={expanded.has('tips') ? 'back' : 'next'} className={`shrink-0 transition ${expanded.has('tips') ? 'rotate-90' : ''}`} />
+          </button>
+          {expanded.has('tips') && (
+            <ul className="mt-3 space-y-2">
+              {tips.map((item) => (
+                <PlanRow key={item.id} item={item} photoIds={attached[item.id] ?? []} onToggle={() => setItem(item.id, { done: !item.done })} onEdit={() => setEditing(item)} onSkip={() => setItem(item.id, { skipped: true })} />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <div className="mt-8 flex flex-wrap gap-2">
         <Button

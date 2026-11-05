@@ -73,6 +73,13 @@ export function defaultFocal(imageAspect: number, frameAspect: number): Focal {
   return { x: 0.5, y: imageAspect < frameAspect ? 0.4 : 0.5, zoom: 1 };
 }
 
+/** Crop centre for a photo in a frame: the user's choice, else the photo's analysed focus, else the heuristic. */
+export function focalFor(chosen: Focal | undefined, photo: { focus?: { x: number; y: number } } | undefined, imageAspect: number, frameAspect: number): Focal {
+  if (chosen) return chosen;
+  if (photo?.focus) return { x: photo.focus.x, y: photo.focus.y, zoom: 1 };
+  return defaultFocal(imageAspect, frameAspect);
+}
+
 export function frameAspect(frame: PhotoFrame, style: FrameStyle): number {
   const r = innerRect(frame, style);
   return r.w / r.h;

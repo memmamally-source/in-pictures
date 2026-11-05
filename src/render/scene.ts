@@ -4,7 +4,7 @@ import { PAGE_H, PAGE_W, type DecorColor, type FrameStyle, type Rect, type TextC
 import { ROLE_FONT, isDarkPage, type FontSpec, type ThemeDef } from '@/layouts/themes';
 
 import { backgroundPaths, decorPaths, shapePath, stampPath, type PathPart } from './decor';
-import { coverCrop, defaultFocal, innerRect, polaroidCaptionRect, type CropRect } from './geometry';
+import { coverCrop, focalFor, innerRect, polaroidCaptionRect, type CropRect } from './geometry';
 import { fitText, type Measure } from './text';
 
 /**
@@ -77,7 +77,7 @@ export interface Scene {
 export interface SceneInput {
   page: AlbumPage;
   theme: ThemeDef;
-  photos: Map<string, Pick<Photo, 'width' | 'height' | 'caption'>>;
+  photos: Map<string, Pick<Photo, 'width' | 'height' | 'caption' | 'focus'>>;
   measure: Measure;
   /**
    * Print bleed in page units. Edge-to-edge photos, edge decorations and the
@@ -170,7 +170,7 @@ export function buildScene({ page, theme, photos, measure, bleed = 0 }: SceneInp
     if (slot?.photoId && meta) {
       const aspect = meta.width / meta.height;
       const fa = inner.w / inner.h;
-      photo = { id: slot.photoId, aspect, crop: coverCrop(aspect, fa, slot.focal ?? defaultFocal(aspect, fa)) };
+      photo = { id: slot.photoId, aspect, crop: coverCrop(aspect, fa, focalFor(slot.focal, meta, aspect, fa)) };
     }
     const xf = xfOf(frame, rot);
     const paper = style === 'none' ? undefined : style === 'stamp' ? stampPath(frame) : shapePath(frame, 'rect', 0);

@@ -1,36 +1,36 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
 import { Showcase } from '@/components/Showcase';
 import { StorageNotice } from '@/components/StorageNotice';
-import { Button, ButtonLink, Confirm, Field, Sheet, TINTS, inputClass } from '@/components/ui';
+import { Button, ButtonLink, Confirm, Field, Notice, Sheet, TINTS, inputClass } from '@/components/ui';
 import { Brand } from '@/config/brand';
 import type { Project } from '@/domain/types';
 import { albumDateLabel } from '@/engine/generate';
+import { downloadBlob } from '@/export/pdf';
 import { getTheme } from '@/layouts/themes';
+import { createBackup, restoreBackup } from '@/services/backup';
 import { useLibrary } from '@/state/library';
 import { usePhotoUrl } from '@/storage/urls';
 import { OCCASIONS, getOccasion } from '@/templates/occasions';
 
 export function Home() {
   const { projects, loaded, refresh } = useLibrary();
+  const hasAlbums = loaded && projects.length > 0;
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  return (
-    <div className="min-h-dvh">
-      <AppHeader right={<ButtonLink to="/new" size="sm" icon="plus" className="hidden sm:inline-flex">Create an album</ButtonLink>} />
-      <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-        <section className="relative mt-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#ffe0cc] via-[#ffd3e4] to-[#e1d6ff] px-6 py-10 sm:mt-6 sm:px-12 sm:py-16">
+  const hero = (
+        <section className={`relative mt-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#ffe0cc] via-[#ffd3e4] to-[#e1d6ff] px-6 sm:mt-6 sm:px-12 ${hasAlbums ? 'py-7 sm:py-9' : 'py-10 sm:py-16'}`}>
           <div className="pointer-events-none absolute -top-20 -right-10 h-72 w-72 rounded-full bg-butter/80 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 left-1/4 h-72 w-72 rounded-full bg-sky/90 blur-3xl" />
-          <HeroBooks />
+          {!hasAlbums && <HeroBooks />}
           <div className="relative max-w-xl">
-            <p className="font-hand text-3xl text-pop">Hello there,</p>
-            <h1 className="mt-1 font-display text-4xl leading-[1.05] tracking-tight sm:text-6xl">Your memories, beautifully kept.</h1>
+            <p className="font-hand text-3xl text-pop">{hasAlbums ? 'Welcome back,' : 'Hello there,'}</p>
+            <h1 className={`mt-1 font-display leading-[1.05] tracking-tight ${hasAlbums ? 'text-3xl sm:text-5xl' : 'text-4xl sm:text-6xl'}`}>{hasAlbums ? 'Ready for another album?' : 'Your memories, beautifully kept.'}</h1>
             <p className="mt-4 max-w-md text-[17px] leading-relaxed text-muted">{Brand.tagline}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <ButtonLink to="/new" size="lg" icon="plus">
@@ -45,9 +45,34 @@ export function Home() {
             </div>
           </div>
         </section>
-
-        <Showcase />
-
+  );
+  const library = (
+        <section className={`${hasAlbums ? 'mt-6' : 'mt-12'} rounded-[2rem] bg-white p-5 shadow-soft sm:p-7`} aria-labelledby="library">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="library" className="font-display text-2xl">
+              Your albums
+            </h2>
+            <RestoreButton />
+          </div>
+          {loaded && !projects.length && (
+            <div className="mt-4 rounded-3xl bg-gradient-to-br from-pop-soft to-rose/60 px-6 py-10 text-center">
+              <Icon name="book" size={32} className="mx-auto text-pop" />
+              <p className="mt-3 font-display text-xl">No albums yet</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-muted">Pick an occasion to plan your photos, or use Quick album with the photos you already have — we’ll design the pages.</p>
+              <ButtonLink to="/new" className="mt-5" icon="plus">
+                Create your first album
+              </ButtonLink>
+            </div>
+          )}
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {projects.map((p) => (
+              <AlbumCard key={p.id} project={p} />
+            ))}
+          </div>
+        </section>
+  );
+  const showcase = <Showcase />;
+  const occasions = (
         <section className="mt-10" aria-labelledby="ideas">
           <div className="flex items-end justify-between">
             <h2 id="ideas" className="font-display text-2xl">
@@ -75,29 +100,22 @@ export function Home() {
             ))}
           </div>
         </section>
+  );
 
-        <section className="mt-12 rounded-[2rem] bg-white p-5 shadow-soft sm:p-7" aria-labelledby="library">
-          <h2 id="library" className="font-display text-2xl">
-            Your library
-          </h2>
-          {loaded && !projects.length && (
-            <div className="mt-4 rounded-3xl bg-gradient-to-br from-pop-soft to-rose/60 px-6 py-10 text-center">
-              <Icon name="book" size={32} className="mx-auto text-pop" />
-              <p className="mt-3 font-display text-xl">No albums yet</p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-muted">Pick an occasion above to plan your photos, or bring the photos you already have — we’ll design the pages.</p>
-              <ButtonLink to="/new" className="mt-5" icon="plus">
-                Create your first album
-              </ButtonLink>
-            </div>
-          )}
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {projects.map((p) => (
-              <AlbumCard key={p.id} project={p} />
-            ))}
-          </div>
-        </section>
+  return (
+    <div className="min-h-dvh">
+      <AppHeader right={<ButtonLink to="/new" size="sm" icon="plus" className="hidden sm:inline-flex">Create an album</ButtonLink>} />
+      <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+        {(hasAlbums ? [hero, library, showcase, occasions] : [hero, showcase, occasions, library]).map((section, i) => (
+          <Fragment key={i}>{section}</Fragment>
+        ))}
 
         <StorageNotice className="mt-12" />
+        <footer className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted">
+          <span>{Brand.name}</span>
+          <Link to="/examples" className="hover:text-ink">Examples</Link>
+          <Link to="/privacy" className="hover:text-ink">Privacy</Link>
+        </footer>
       </main>
     </div>
   );
@@ -125,6 +143,48 @@ function HeroBooks() {
   );
 }
 
+/** Restores an album from a backup file (always as a new copy). */
+function RestoreButton() {
+  const input = useRef<HTMLInputElement>(null);
+  const refresh = useLibrary((s) => s.refresh);
+  const navigate = useNavigate();
+  const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept=".zip,application/zip"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          setState({ busy: true });
+          try {
+            const project = await restoreBackup(file);
+            await refresh();
+            setState({ busy: false });
+            navigate(`/album/${project.id}/album`);
+          } catch (err) {
+            setState({ busy: false, error: err instanceof Error ? err.message : 'Couldn’t restore that file.' });
+          }
+        }}
+      />
+      <Button size="sm" variant="ghost" icon="upload" disabled={state.busy} onClick={() => input.current?.click()}>
+        {state.busy ? 'Restoring…' : 'Restore a backup'}
+      </Button>
+      {state.error && (
+        <Notice tone="error" className="w-full">
+          {state.error}
+        </Notice>
+      )}
+    </>
+  );
+}
+
 function coverPhotoId(p: Project): string | undefined {
   return p.album?.pages[0]?.photos[0]?.photoId ?? p.coverPhotoId ?? undefined;
 }
@@ -132,6 +192,16 @@ function coverPhotoId(p: Project): string | undefined {
 function AlbumCard({ project }: { project: Project }) {
   const navigate = useNavigate();
   const { rename, duplicate, remove } = useLibrary();
+  const [backingUp, setBackingUp] = useState<number | null>(null);
+  const saveBackup = async () => {
+    setBackingUp(0);
+    try {
+      const { blob, name } = await createBackup(project.id, (done, total) => setBackingUp(Math.round((done / total) * 100)));
+      downloadBlob(blob, name);
+    } finally {
+      setBackingUp(null);
+    }
+  };
   const occasion = getOccasion(project.occasionId);
   const theme = getTheme(project.themeId);
   const url = usePhotoUrl(coverPhotoId(project), 'thumb');
@@ -163,7 +233,7 @@ function AlbumCard({ project }: { project: Project }) {
       </Link>
       <div className="mt-2 flex items-start justify-between gap-1">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{occasion.name}</p>
+          <p className="truncate text-sm font-medium">{project.quick ? 'Quick album' : occasion.name}</p>
           <p className="truncate text-xs text-muted">
             {date || 'No date'} · {project.album ? `${project.album.pages.length} pages` : 'Draft'}
           </p>
@@ -184,6 +254,10 @@ function AlbumCard({ project }: { project: Project }) {
           <Button variant="secondary" icon="copy" onClick={async () => (setMenu(false), await duplicate(project.id))}>
             Duplicate
           </Button>
+          <Button variant="secondary" icon="download" disabled={backingUp !== null} onClick={saveBackup}>
+            {backingUp !== null ? `Saving backup… ${backingUp}%` : 'Save a backup file'}
+          </Button>
+          <p className="px-1 text-xs text-muted">A backup is one file with the album and all its photos. Keep it in Files, iCloud Drive or Google Drive, and restore it here any time.</p>
           <Button variant="danger" icon="trash" onClick={() => (setMenu(false), setDeleting(true))}>
             Delete
           </Button>

@@ -32,7 +32,7 @@ export function StorageNotice({ className = '', compact }: { className?: string;
           {level === 'warn' && <p className="font-medium">Browser storage is getting full ({formatBytes(health!.usage)} of {formatBytes(health!.quota)}).</p>}
           <p>
             Your albums and photos are saved privately in this browser, on this device only. Nothing is uploaded. This is not a cloud backup: clearing browser data, private
-            browsing, or (on iPhone) not opening the site for a while can remove them. Export a PDF of anything you want to keep safe.
+            browsing, or (on iPhone) not opening the site for a while can remove them. To keep an album safe, use <strong>Save a backup file</strong> in the album’s menu and keep the file somewhere like iCloud Drive or Google Drive.
           </p>
           {health?.supported && (
             <p className="flex flex-wrap items-center gap-x-3 gap-y-2">

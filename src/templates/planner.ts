@@ -174,7 +174,7 @@ function candidates(occasion: OccasionDef, a: Answers): { item: PlanItem; priori
     if (!matches(shot.when, a, days)) continue;
     const priority = shot.priority ?? 2;
     const title = fillTokens(shot.title, a) ?? shot.fallbackTitle ?? shot.title.replace(/\{[\w:-]+\}/g, '').trim();
-    const base = { title, hint: shot.hint, category: shot.category, chapter: shot.chapter, shotId: shot.id };
+    const base = { title, hint: shot.hint, category: shot.category, chapter: shot.chapter, shotId: shot.id, priority: shot.priority ?? 2 };
     if (shot.perDay && days > 1 && days <= 7) {
       for (let d = 0; d < days; d++) {
         const when = shortDate(a.startDate, d);

@@ -6,6 +6,8 @@ import { mulberry32 } from '@/render/decor';
 import { cropLoss, frameAspect } from '@/render/geometry';
 import { joinNames } from '@/templates/planner';
 
+import { curatePhotos } from './curate';
+
 /**
  * The album layout engine. Deterministic heuristics, no AI:
  *  1. sections from the user's chapters / checklist prompts, else capture days;
@@ -19,7 +21,7 @@ import { joinNames } from '@/templates/planner';
  */
 
 export interface GenerateInput {
-  project: Pick<Project, 'id' | 'answers' | 'chapters' | 'plan' | 'themeId' | 'coverPhotoId'>;
+  project: Pick<Project, 'id' | 'answers' | 'chapters' | 'plan' | 'themeId' | 'coverPhotoId' | 'useAllPhotos'>;
   photos: Photo[];
   seed: number;
 }
@@ -333,8 +335,14 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   const pages: AlbumPage[] = [];
   let n = 0;
   const id = () => `pg_${seed.toString(36)}_${n++}`;
-  const dateLabel = albumDateLabel(project, photos);
-  const sorted = [...photos].sort((x, y) => x.order - y.order);
+  // No separate date line when the title already is the date (e.g. Quick albums).
+  const rawDate = albumDateLabel(project, photos);
+  const dateLabel = rawDate && rawDate !== a.title.trim() ? rawDate : '';
+  // Near-duplicates and clearly blurry shots are set aside unless the user asked for everything.
+  const curated = project.useAllPhotos ? photos : curatePhotos(photos).keep;
+  const chosenCover = photos.find((p) => p.id === project.coverPhotoId);
+  const pool = chosenCover && !curated.includes(chosenCover) ? [...curated, chosenCover] : curated;
+  const sorted = [...pool].sort((x, y) => x.order - y.order);
 
   // Cover.
   const cover = sorted.find((p) => p.id === project.coverPhotoId) ?? sorted.find((p) => p.favourite) ?? sorted[0];

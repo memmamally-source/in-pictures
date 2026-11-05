@@ -8,7 +8,7 @@ import { getLayout, layoutsFor } from '@/layouts/layouts';
 import type { LayoutDef } from '@/layouts/schema';
 import { THEMES, getTheme } from '@/layouts/themes';
 import { PageView } from '@/render/PageView';
-import { coverCrop, defaultFocal, innerRect } from '@/render/geometry';
+import { coverCrop, focalFor, innerRect } from '@/render/geometry';
 import { usePhotoUrl } from '@/storage/urls';
 
 /** Pick a layout; previews use the page's own photos. */
@@ -109,7 +109,7 @@ export function CropSheet({ open, onClose, page, slot, themeId, photo, onSave }:
   const inner = innerRect(frame, frame.frame ?? getTheme(themeId).frame);
   const fa = inner.w / inner.h;
   const ia = photo.width / photo.height;
-  const [focal, setFocal] = useState<Focal>(page.photos[slot]?.focal ?? defaultFocal(ia, fa));
+  const [focal, setFocal] = useState<Focal>(focalFor(page.photos[slot]?.focal, photo, ia, fa));
   const url = usePhotoUrl(photo.id, 'display');
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; f: Focal } | null>(null);
@@ -138,7 +138,7 @@ export function CropSheet({ open, onClose, page, slot, themeId, photo, onSave }:
       title="Adjust photo"
       footer={
         <div className="flex justify-between gap-2">
-          <Button variant="ghost" onClick={() => setFocal(defaultFocal(ia, fa))}>
+          <Button variant="ghost" onClick={() => setFocal(focalFor(undefined, photo, ia, fa))}>
             Reset
           </Button>
           <div className="flex gap-2">

@@ -4,9 +4,10 @@ import { Button, Chip, Notice, ProgressBar, Sheet, Toggle } from '@/components/u
 import type { Album, Photo, ThemeId } from '@/domain/types';
 import { downloadBlob, exportPdf, pdfFilename } from '@/export/pdf';
 import { QUALITY, TYPICAL_MIN_PAGES, checkAlbum, printPlan, type Quality } from '@/export/quality';
+import { createBackup } from '@/services/backup';
 import { formatBytes } from '@/storage/quota';
 
-export function ExportSheet({ open, onClose, album, photos, themeId, title, onGoToPage }: {
+export function ExportSheet({ open, onClose, album, photos, themeId, title, onGoToPage, projectId }: {
   open: boolean;
   onClose: () => void;
   album: Album;
@@ -14,7 +15,9 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
   themeId: ThemeId;
   title: string;
   onGoToPage: (index: number) => void;
+  projectId: string;
 }) {
+  const [backup, setBackup] = useState<number | null>(null);
   const [quality, setQuality] = useState<Quality>('standard');
   const [includeCover, setIncludeCover] = useState(true);
   const plan = printPlan(album, includeCover);
@@ -166,6 +169,27 @@ export function ExportSheet({ open, onClose, album, photos, themeId, title, onGo
           </div>
         )}
         {error && <Notice tone="error">{error}. If your device is low on memory, try Standard quality.</Notice>}
+
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3">
+          <p className="text-xs text-muted">A PDF is for viewing and printing. To keep the editable album safe, save a backup file (album + every photo).</p>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="download"
+            disabled={backup !== null}
+            onClick={async () => {
+              setBackup(0);
+              try {
+                const { blob, name } = await createBackup(projectId, (d, t) => setBackup(Math.round((d / t) * 100)));
+                downloadBlob(blob, name);
+              } finally {
+                setBackup(null);
+              }
+            }}
+          >
+            {backup !== null ? `${backup}%` : 'Backup'}
+          </Button>
+        </div>
       </div>
     </Sheet>
   );

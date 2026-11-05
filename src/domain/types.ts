@@ -54,6 +54,8 @@ export interface PlanItem {
   custom?: boolean;
   /** Library shot id it came from (absent for custom prompts). */
   shotId?: string;
+  /** 1 = essential, 2 = recommended, 3 = extra. */
+  priority?: 1 | 2 | 3;
 }
 
 export interface Chapter {
@@ -80,6 +82,11 @@ export interface Photo {
   favourite: boolean;
   planItemId?: string;
   chapter?: string;
+  /** On-device analysis (see engine/analysis.ts); absent for photos added before it existed. */
+  hash?: string;
+  sharpness?: number;
+  /** Where the interesting part of the picture is (0..1), used as the default crop centre. */
+  focus?: { x: number; y: number };
 }
 
 export interface Focal {
@@ -123,6 +130,8 @@ export interface Project {
   step: ProjectStep;
   /** Made with "Quick album": no questions; the title comes from the photos' dates. */
   quick?: boolean;
+  /** Use every photo, including near-duplicates and blurry ones the album would set aside. */
+  useAllPhotos?: boolean;
   createdAt: number;
   updatedAt: number;
 }

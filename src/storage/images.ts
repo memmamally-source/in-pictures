@@ -1,3 +1,5 @@
+import { analyse, type PhotoAnalysis } from '@/engine/analysis';
+
 import { readExif } from './exif';
 
 /**
@@ -20,6 +22,27 @@ export interface Processed {
   originalWidth: number;
   originalHeight: number;
   takenAt?: string;
+  analysis?: PhotoAnalysis;
+}
+
+/** Pixels of a small copy (192 px long edge) for on-device analysis. */
+function analyseSource(source: CanvasImageSource, w: number, h: number): PhotoAnalysis | undefined {
+  try {
+    const scale = 192 / Math.max(w, h);
+    const tw = Math.max(8, Math.round(w * scale));
+    const th = Math.max(8, Math.round(h * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = tw;
+    canvas.height = th;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return undefined;
+    ctx.drawImage(source, 0, 0, tw, th);
+    const { data } = ctx.getImageData(0, 0, tw, th);
+    canvas.width = canvas.height = 0;
+    return analyse(data, tw, th);
+  } catch {
+    return undefined; // analysis is optional
+  }
 }
 
 export const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif';
@@ -81,7 +104,9 @@ export async function processImage(file: File): Promise<Processed> {
     const full = await resize(img.source, img.width, img.height, SIZES.full, 0.9);
     const display = await resize(img.source, img.width, img.height, SIZES.display, 0.85);
     const thumb = await resize(img.source, img.width, img.height, SIZES.thumb, 0.8);
+    const analysis = analyseSource(img.source, img.width, img.height);
     return {
+      analysis,
       full: full.blob,
       display: display.blob,
       thumb: thumb.blob,

@@ -1,7 +1,7 @@
 import type { Album, Photo, ThemeId } from '@/domain/types';
 import { getLayout } from '@/layouts/layouts';
 import { getTheme } from '@/layouts/themes';
-import { coverCrop, defaultFocal, effectiveDpi, innerRect } from '@/render/geometry';
+import { coverCrop, effectiveDpi, focalFor, innerRect } from '@/render/geometry';
 
 /**
  * Pre-export checks. Effective resolution = pixels of the photo that end up
@@ -83,7 +83,7 @@ export function checkAlbum(album: Album, photos: Photo[], themeId: ThemeId, qual
       const inner = innerRect(frame, frame.frame ?? theme.frame);
       const ia = photo.width / photo.height;
       const fa = inner.w / inner.h;
-      const crop = coverCrop(ia, fa, slot.focal ?? defaultFocal(ia, fa));
+      const crop = coverCrop(ia, fa, focalFor(slot.focal, photo, ia, fa));
       const ppi = Math.round(effectiveDpi(Math.min(photo.width, photo.originalWidth), crop, inner.w));
       if (ppi < fairAt) issues.push({ page: pi, slot: si, photoId: photo.id, photoName: photo.name, ppi, level: ppi < lowAt ? 'low' : 'fair' });
     });

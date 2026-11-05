@@ -92,6 +92,18 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 
 `#/quick`: pick any number of photos and get an album with no questions. It creates a `custom` project marked `quick`, hands the files to the album screen (`state/pendingFiles.ts`), imports them, then generates: the title comes from the photos' dates and the size from the count (`templates/quick.ts`: ≤24 Simple, ≤70 Deluxe, more Extravagant).
 
+## 4d. Smart photo selection and crops
+
+At import each photo gets an on-device analysis (`engine/analysis.ts`, on a 192 px copy): a 64-bit difference hash, a sharpness score (variance of the Laplacian) and a focus point (skin tones + detail + saturation, biased to the upper middle; a heuristic, not face recognition). `engine/curate.ts` then, before generating, keeps only the best of each run of near-identical neighbours (≤ 8 bits apart and ≤ 90 s apart) and leaves out clearly blurry shots (< 22% of the album's median sharpness, only with 10+ photos). Favourites, captioned and checklist photos are never left out. The editor says how many were left out and offers to include them (`Project.useAllPhotos`). The focus point is the default crop centre unless the user moves it.
+
+## 4e. Backup and restore
+
+`services/backup.ts` saves one `.inpictures.zip` (a plain "stored" zip written by `storage/zip.ts`): `manifest.json` with the project and photo records, plus every photo file. Restore always creates a new copy with fresh ids, writing photos before the project so an interrupted restore leaves nothing half-made.
+
+## 4f. Undo
+
+The editor keeps up to 50 snapshots of the album and its style; typing in one field within 1.5 s counts as one step. Buttons and Ctrl/⌘+Z, Shift+Ctrl/⌘+Z or Ctrl+Y.
+
 ## 5. Storage, autosave, recovery
 
 - IndexedDB (`idb`), database `in-pictures`: `projects` (JSON), `photos` (metadata, indexed by project), `blobs` (`<photoId>:thumb|display|full`).
@@ -121,7 +133,6 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 - Not tested on physical phones; tested with headless Chromium on desktop and an emulated iPhone 13 viewport.
 - HEIC decoding depends on the browser (Safari yes, Chrome/Firefox no).
 - Very large photos (e.g. 48 MP) are decoded at full size before resizing; on older phones that could run out of memory. They’re processed one at a time to reduce that risk.
-- No undo history beyond reversible edits and “Redesign”.
 - Reordering by drag uses HTML5 drag-and-drop (desktop); on touch devices use the Earlier/Later buttons.
 - PDF text is part of the page image (not selectable or searchable).
-- Data is per browser and device; nothing syncs.
+- Data is per browser and device; nothing syncs (backup files move albums between devices by hand).

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
+import { Icon } from '@/components/Icon';
 import { Button, Chip, Field, TINTS, Toggle, inputClass } from '@/components/ui';
 import type { AlbumLength, Answers, GroupType, Mood } from '@/domain/types';
 import { useLibrary } from '@/state/library';
@@ -158,11 +159,6 @@ export function Personalise({ edit }: { edit?: boolean }) {
             </Field>
           )}
 
-          {!a.groups.includes('solo') && (
-            <Field label="Names (optional)" htmlFor="names" hint="Separate with commas. Shown on the closing page; never shared.">
-              <input id="names" className={inputClass} placeholder={a.groups.length === 1 && a.groups[0] === 'couple' ? 'e.g. Anna, Ben' : 'e.g. Mum, Dad, Leo, Ava'} value={namesText} onChange={(e) => setNamesText(e.target.value)} autoComplete="off" />
-            </Field>
-          )}
 
           {q.askChildren && groupish && <Toggle checked={a.children} onChange={(v) => set({ children: v })} label="Children are taking part" help="Adds kid-friendly photo ideas." />}
 
@@ -186,15 +182,6 @@ export function Personalise({ edit }: { edit?: boolean }) {
             ),
           )}
 
-          <Field label="Mood">
-            <div className="flex flex-wrap gap-2">
-              {MOODS.map((m) => (
-                <Chip key={m.id} selected={a.mood === m.id} onClick={() => set({ mood: m.id })}>
-                  {m.label}
-                </Chip>
-              ))}
-            </div>
-          </Field>
 
           <Field label="Album size" hint={LENGTHS.find((l) => l.id === a.length)?.help}>
             <div className="flex flex-wrap gap-2">
@@ -234,9 +221,36 @@ export function Personalise({ edit }: { edit?: boolean }) {
             <input id="title" className={inputClass} value={title} maxLength={80} onChange={(e) => (setTitleTouched(true), set({ title: e.target.value }))} />
           </Field>
 
-          <Field label="A line for the last page (optional)" htmlFor="note" hint="Your words, printed on the closing page. Leave blank for none.">
-            <textarea id="note" rows={2} className={inputClass} maxLength={240} value={a.closingNote ?? ''} onChange={(e) => set({ closingNote: e.target.value })} />
-          </Field>
+
+          <details className="group rounded-2xl bg-white/70 ring-1 ring-line [&_summary::-webkit-details-marker]:hidden" open={!!edit}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5">
+              <span>
+                <span className="block text-[15px] font-medium">More options</span>
+                <span className="block text-xs text-muted">Names, mood and a line for the last page — all optional.</span>
+              </span>
+              <Icon name="next" className="shrink-0 transition group-open:rotate-90" />
+            </summary>
+            <div className="space-y-6 px-4 pt-2 pb-5">
+            {!a.groups.includes('solo') && (
+              <Field label="Names (optional)" htmlFor="names" hint="Separate with commas. Shown on the closing page; never shared.">
+                <input id="names" className={inputClass} placeholder={a.groups.length === 1 && a.groups[0] === 'couple' ? 'e.g. Anna, Ben' : 'e.g. Mum, Dad, Leo, Ava'} value={namesText} onChange={(e) => setNamesText(e.target.value)} autoComplete="off" />
+              </Field>
+            )}
+            <Field label="Mood">
+              <div className="flex flex-wrap gap-2">
+                {MOODS.map((m) => (
+                  <Chip key={m.id} selected={a.mood === m.id} onClick={() => set({ mood: m.id })}>
+                    {m.label}
+                  </Chip>
+                ))}
+              </div>
+            </Field>
+            <Field label="A line for the last page (optional)" htmlFor="note" hint="Your words, printed on the closing page. Leave blank for none.">
+              <textarea id="note" rows={2} className={inputClass} maxLength={240} value={a.closingNote ?? ''} onChange={(e) => set({ closingNote: e.target.value })} />
+            </Field>
+
+            </div>
+          </details>
 
           <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ivory/95 pt-3 backdrop-blur">
             <div className="mx-auto flex max-w-2xl justify-end gap-2 px-4 sm:px-6">

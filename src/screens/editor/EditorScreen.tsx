@@ -4,10 +4,11 @@ import { Icon } from '@/components/Icon';
 import { ImportStatus } from '@/components/ImportStatus';
 import { Thumb } from '@/components/Thumb';
 import { Button, ButtonLink, Confirm, IconButton, inputClass } from '@/components/ui';
-import type { Album, Photo } from '@/domain/types';
+import type { Album, Photo, Project } from '@/domain/types';
 import {
   addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
 } from '@/engine/edit';
+import { curatePhotos } from '@/engine/curate';
 import { albumDateLabel, generateAlbum } from '@/engine/generate';
 import { getLayout } from '@/layouts/layouts';
 import { getTheme } from '@/layouts/themes';
@@ -38,7 +39,13 @@ export function EditorScreen() {
   const [current, setCurrent] = useState(0);
   const [slot, setSlot] = useState<number | null>(null);
   const [swapFrom, setSwapFrom] = useState<number | null>(null);
-  const [sheet, setSheet] = useState<null | 'layout' | 'add' | 'picker' | 'crop' | 'theme' | 'export' | 'regen' | 'delete'>(null);
+  const [sheet, setSheet] = useState<null | 'layout' | 'add' | 'picker' | 'crop' | 'theme' | 'export' | 'regen' | 'delete' | 'use-all'>(null);
+  // Undo / redo: snapshots of the album and its style.
+  type Snapshot = { album: Album | undefined; themeId: Project['themeId']; useAllPhotos?: boolean };
+  const [past, setPast] = useState<Snapshot[]>([]);
+  const [future, setFuture] = useState<Snapshot[]>([]);
+  const lastEdit = useRef<{ key: string; at: number } | null>(null);
+  const setAside = useMemo(() => (project.useAllPhotos ? [] : curatePhotos(photos).setAside), [photos, project.useAllPhotos]);
   const theme = getTheme(project.themeId);
   const map = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
   const album = project.album;
@@ -62,6 +69,52 @@ export function EditorScreen() {
       });
     }
   }, [project.album, photos, imports?.active, updateProject]);
+
+  const snapshot = (): Snapshot => ({ album, themeId: project.themeId, useAllPhotos: project.useAllPhotos });
+  /** Applies a change and remembers how to undo it. Typing in one field counts as one step. */
+  const commit = (fn: (p: Project) => Project, coalesceKey?: string) => {
+    const now = Date.now();
+    const same = coalesceKey && lastEdit.current?.key === coalesceKey && now - lastEdit.current.at < 1500;
+    lastEdit.current = coalesceKey ? { key: coalesceKey, at: now } : null;
+    if (!same) setPast((h) => [...h.slice(-49), snapshot()]);
+    setFuture([]);
+    updateProject(fn);
+  };
+  const set = (a: Album, coalesceKey?: string) => commit((p) => ({ ...p, album: a }), coalesceKey);
+  const restore = (s: Snapshot) => updateProject((p) => ({ ...p, album: s.album, themeId: s.themeId, useAllPhotos: s.useAllPhotos }));
+  const undo = () => {
+    const prev = past.at(-1);
+    if (!prev) return;
+    setPast((h) => h.slice(0, -1));
+    setFuture((f) => [snapshot(), ...f]);
+    lastEdit.current = null;
+    restore(prev);
+  };
+  const redo = () => {
+    const next = future[0];
+    if (!next) return;
+    setFuture((f) => f.slice(1));
+    setPast((h) => [...h, snapshot()]);
+    restore(next);
+  };
+
+  // ⌘/Ctrl+Z to undo, ⇧⌘/Ctrl+Shift+Z (or Ctrl+Y) to redo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if ((e.target as HTMLElement).closest('input, textarea')) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   if (!album) {
     return (
@@ -92,7 +145,6 @@ export function EditorScreen() {
   const layout = getLayout(page.layoutId);
   const used = usedPhotoIds(album);
   const spare = unusedPhotos(album, photos);
-  const set = (a: Album) => updateProject((p) => ({ ...p, album: a }));
   const select = (i: number) => {
     setCurrent(i);
     setSlot(null);
@@ -114,24 +166,34 @@ export function EditorScreen() {
   if (layout.texts.some((t) => t.key === 'subtitle') && !textKeys.includes('date') && page.text.date) textKeys.push('date');
   const captionSlots = layout.texts.filter((t) => t.photo !== undefined).map((t) => t.photo!);
 
+  const notice =
+    setAside.length > 0 ? (
+      <button type="button" onClick={() => setSheet('use-all')} className="truncate rounded-full bg-pop-soft px-3 py-1.5 text-xs text-pop-dark hover:bg-lilac">
+        {setAside.length} similar or blurry shot{setAside.length === 1 ? '' : 's'} left out · Include
+      </button>
+    ) : spare.length > 0 ? (
+      <span className="inline-block rounded-full bg-butter px-3 py-1.5 text-xs text-butter-ink">
+        {spare.length} photo{spare.length === 1 ? '' : 's'} not in the album
+      </span>
+    ) : null;
+
   return (
     <main className="mx-auto max-w-7xl px-3 pb-12 sm:px-5">
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="secondary" icon="palette" onClick={() => setSheet('theme')}>
-          {theme.name}
+      <div className="mt-3 flex items-center gap-1.5 sm:gap-2">
+        <Button size="sm" variant="secondary" icon="palette" onClick={() => setSheet('theme')} aria-label={`Style: ${theme.name}`} title="Album style">
+          <span className="hidden sm:inline">{theme.name}</span>
         </Button>
-        <Button size="sm" variant="secondary" icon="refresh" onClick={() => setSheet('regen')}>
-          Redesign album
+        <Button size="sm" variant="secondary" icon="refresh" onClick={() => setSheet('regen')} aria-label="Redesign album" title="Redesign album">
+          <span className="hidden sm:inline">Redesign album</span>
         </Button>
-        {spare.length > 0 && (
-          <span className="rounded-full bg-butter px-3 py-1.5 text-xs text-butter-ink">
-            {spare.length} photo{spare.length === 1 ? '' : 's'} not in the album
-          </span>
-        )}
-        <Button size="sm" icon="download" className="ml-auto" onClick={() => setSheet('export')}>
+        <IconButton icon="undo" label="Undo" disabled={!past.length} onClick={undo} />
+        <IconButton icon="redo" label="Redo" disabled={!future.length} onClick={redo} />
+        <div className="hidden min-w-0 lg:block">{notice}</div>
+        <Button size="sm" icon="download" className="ml-auto shrink-0" onClick={() => setSheet('export')}>
           Export PDF
         </Button>
       </div>
+      {notice && <div className="mt-2 lg:hidden">{notice}</div>}
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
         <section aria-label="Album preview" className="min-w-0">
@@ -227,9 +289,9 @@ export function EditorScreen() {
                 <label key={k} className="block">
                   <span className="text-xs text-muted">{TEXT_LABELS[k] ?? k}</span>
                   {k === 'note' ? (
-                    <textarea rows={2} className={`${inputClass} mt-1`} value={page.text[k] ?? ''} onChange={(e) => set(setText(album, idx, k, e.target.value))} maxLength={240} />
+                    <textarea rows={2} className={`${inputClass} mt-1`} value={page.text[k] ?? ''} onChange={(e) => set(setText(album, idx, k, e.target.value), `text:${page.id}:${k}`)} maxLength={240} />
                   ) : (
-                    <input className={`${inputClass} mt-1`} value={page.text[k] ?? ''} onChange={(e) => set(setText(album, idx, k, e.target.value))} maxLength={90} />
+                    <input className={`${inputClass} mt-1`} value={page.text[k] ?? ''} onChange={(e) => set(setText(album, idx, k, e.target.value), `text:${page.id}:${k}`)} maxLength={90} />
                   )}
                 </label>
               ))}
@@ -273,8 +335,8 @@ export function EditorScreen() {
       {sheet === 'crop' && slot !== null && slotPhoto && (
         <CropSheet open onClose={() => setSheet(null)} page={page} slot={slot} themeId={project.themeId} photo={slotPhoto} onSave={(f) => set(setFocal(album, idx, slot, f))} />
       )}
-      {sheet === 'theme' && <ThemeSheet open onClose={() => setSheet(null)} current={project.themeId} onPick={(id) => updateProject((p) => ({ ...p, themeId: id, album: p.album && applyTheme(p.album, id, photos) }))} />}
-      {sheet === 'export' && <ExportSheet open onClose={() => setSheet(null)} album={album} photos={photos} themeId={project.themeId} title={project.answers.title} onGoToPage={select} />}
+      {sheet === 'theme' && <ThemeSheet open onClose={() => setSheet(null)} current={project.themeId} onPick={(id) => commit((p) => ({ ...p, themeId: id, album: p.album && applyTheme(p.album, id, photos) }))} />}
+      {sheet === 'export' && <ExportSheet open onClose={() => setSheet(null)} album={album} photos={photos} themeId={project.themeId} title={project.answers.title} onGoToPage={select} projectId={project.id} />}
       <Confirm
         open={sheet === 'regen'}
         onClose={() => setSheet(null)}
@@ -282,7 +344,21 @@ export function EditorScreen() {
         body="All pages are laid out again with a fresh arrangement, using every photo. Your photos, captions, favourites and chapters stay; changes you made to individual pages (layouts, crops, page order, edited titles) are replaced."
         confirmLabel="Redesign"
         onConfirm={() => {
-          updateProject((p) => ({ ...p, album: generateAlbum({ project: p, photos, seed: (p.album?.seed ?? 1) + 1 }) }));
+          commit((p) => ({ ...p, album: generateAlbum({ project: p, photos, seed: (p.album?.seed ?? 1) + 1 }) }));
+          select(0);
+        }}
+      />
+      <Confirm
+        open={sheet === 'use-all'}
+        onClose={() => setSheet(null)}
+        title="Include every photo?"
+        body={`${setAside.length} photo${setAside.length === 1 ? ' was' : 's were'} left out because ${setAside.length === 1 ? 'it looked' : 'they looked'} nearly identical to another shot or clearly blurry. Including them redesigns the album with every photo. You can undo this.`}
+        confirmLabel="Include and redesign"
+        onConfirm={() => {
+          commit((p) => {
+            const next = { ...p, useAllPhotos: true };
+            return { ...next, album: generateAlbum({ project: next, photos, seed: p.album?.seed ?? 1 }) };
+          });
           select(0);
         }}
       />
