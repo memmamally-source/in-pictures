@@ -57,7 +57,7 @@ A `ThemeDef` sets paper colours and pattern, fonts per role (title, heading, bod
 - **Shapes** (`schema.ts`): Portrait 8 × 10 in, Landscape 11 × 8.5 in, Square 12 × 12 in. A page is always 100 units wide; its height follows the shape (`pageHeight`), and a two-page spread is 200 wide. Project and album carry `format`.
 - **Professional layouts** (`proLayouts.ts`) are generated for each shape from grid recipes (weights, so one recipe fits every shape): full-bleed with hairline gutters, white-border grids, chapter and closing pages, photo covers, and **spreads**, including panoramas across the fold. Hand-made layouts stay portrait-only; Gallery and Bold Graphic use only the generated set; other styles use it for landscape and square books.
 - **Spreads in the book** (`engine/book.ts`): the cover sits alone on the right, then pages pair up; a spread fills both sides. The generator's pagination tracks which side the next page falls on, so spreads always start on a left page. Print export splits each spread into its left and right halves (each with bleed on all sides) and adds a blank page if an edit ever leaves a spread unfaced.
-- **Poster covers** (Bold Graphic): the place in big type with the occasion beneath and a flat illustration (`render/motifs.ts`, 16 drawings chosen from the place or occasion, e.g. Sicily → lemon, Lisbon → tram, weddings → rings), on a colour picked per album.
+- **Poster covers** (Bold Graphic): the place in big type with the occasion beneath and a flat illustration (`render/motifs.ts`, 18 drawings chosen from the place or occasion, e.g. Sicily → lemon, Lisbon → tram, weddings → rings), on a colour picked per album.
 - Occasions suggest a shape and style: weddings, engagements and anniversaries → square Gallery; trips → landscape Gallery or Bold Graphic.
 
 ## 3. Album generator
@@ -94,7 +94,7 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 
 ## 4b. Example album (home page)
 
-`src/demo/` builds an imaginary seaside album from 14 illustrated scenes (`scenes.ts`, SVG generated in code — no stock photos) and runs it through the real generator for each style (`demoAlbum.ts`). `Showcase` (home page and `#/examples`) shows it in the book viewer, turning pages every 2.6 s and moving to the next style at the end. `PageView`/`BookViewer` take a `resolveSrc` so example pictures don't come from storage. It's labelled as an example on screen.
+`src/demo/` builds an example seaside album from 16 CC0 photos from Wikimedia Commons (`photos/`, resized to 1100 px; titles, authors and links in `photos.ts`, shown at `#/credits`) and runs it through the real generator for each style (`demoAlbum.ts`). `Showcase` (home page and `#/examples`) shows it in the book viewer, turning pages every 2.6 s and moving to the next style at the end. `PageView`/`BookViewer` take a `resolveSrc` so example pictures don't come from storage. It's labelled as an example on screen.
 
 ## 4c. Quick album
 

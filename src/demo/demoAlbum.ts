@@ -3,68 +3,43 @@ import { generateAlbum } from '@/engine/generate';
 import { getOccasion } from '@/templates/occasions';
 import { buildPlan, chaptersFor } from '@/templates/planner';
 
-import { sceneUrl, type DemoScene, type SceneKind } from './scenes';
+import { DEMO_PHOTO_INFO, demoPhotoUrl } from './photos';
 
 /**
- * The home-page example: an imaginary seaside summer, laid out by the real
- * album engine in each style. Illustrations stand in for photos.
+ * The home-page example: a seaside summer laid out by the real album engine
+ * in each style, using public-domain (CC0) photos from Wikimedia Commons.
  */
 
-const L = [800, 600] as const;
-const P = [600, 800] as const;
-const Q = [700, 700] as const;
-const W = [960, 540] as const;
-
-const SHOTS: [SceneKind, readonly [number, number], string, { caption?: string; favourite?: boolean }?][] = [
-  ['village', P, 'arrival', { favourite: true }],
-  ['harbour', L, 'arrival'],
-  ['beach', W, 'exploring', { caption: 'First swim of the summer' }],
-  ['palms', P, 'exploring'],
-  ['mountains', L, 'exploring'],
-  ['flowers', P, 'exploring'],
-  ['table', Q, 'flavours'],
-  ['lemons', Q, 'flavours'],
-  ['cake', Q, 'flavours', { caption: 'Birthday cake by the sea' }],
-  ['balloons', P, 'together'],
-  ['ferris', L, 'together'],
-  ['couple', L, 'together', { favourite: true }],
-  ['night', P, 'last-day'],
-  ['sea-sunset', L, 'last-day'],
-];
-
-export const DEMO_PHOTOS: Photo[] = SHOTS.map(([kind, [w, h], chapter, extra], i) => ({
-  id: `demo-${kind}`,
+export const DEMO_PHOTOS: Photo[] = DEMO_PHOTO_INFO.map((x, i) => ({
+  id: `demo-${x.name}`,
   projectId: 'demo',
-  name: `${kind}.svg`,
-  width: w,
-  height: h,
-  originalWidth: w * 4,
-  originalHeight: h * 4,
+  name: `${x.name}.jpg`,
+  width: x.width,
+  height: x.height,
+  originalWidth: x.width * 3,
+  originalHeight: x.height * 3,
   addedAt: i,
   order: i + 1,
-  favourite: !!extra?.favourite,
-  caption: extra?.caption,
-  chapter,
+  favourite: !!x.favourite,
+  caption: x.caption,
+  chapter: x.chapter,
 }));
 
-const SCENES = new Map<string, DemoScene>(SHOTS.map(([kind, [w, h]]) => [`demo-${kind}`, { kind, width: w, height: h }]));
+const IDS = new Set(DEMO_PHOTOS.map((p) => p.id));
 
-export const demoSrc = (photoId: string): string | undefined => {
-  const s = SCENES.get(photoId);
-  return s && sceneUrl(s);
-};
+export const demoSrc = (photoId: string): string | undefined => (IDS.has(photoId) ? demoPhotoUrl(photoId.slice(5)) : undefined);
 
 export const DEMO_PHOTO_MAP = new Map(DEMO_PHOTOS.map((p) => [p.id, p]));
 
 function demoProject(themeId: ThemeId, format: BookFormat): Project {
   const occasion = getOccasion('international-travel');
   const answers = {
-    title: 'Summer on the Amalfi Coast', location: 'Amalfi Coast', startDate: '2026-07-04', endDate: '2026-07-11',
+    title: 'A Summer by the Sea', location: 'Seaside', startDate: '2026-07-04', endDate: '2026-07-11',
     groups: ['friends' as const], participants: 4, names: [], children: false, mood: 'joyful' as const, length: 'simple' as const, mode: 'have-photos' as const, extras: {},
   };
   return {
     id: 'demo', schemaVersion: 1, occasionId: occasion.id, answers, plan: buildPlan(occasion, answers), chapters: chaptersFor(occasion),
-    themeId, format, step: 'album', createdAt: 0, updatedAt: 0, coverPhotoId: 'demo-village',
+    themeId, format, step: 'album', createdAt: 0, updatedAt: 0, coverPhotoId: 'demo-harbour',
   };
 }
 

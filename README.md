@@ -10,7 +10,7 @@ A mobile-first web app (React 19, TypeScript, Vite, Tailwind CSS 4) that:
 2. asks a few **questions that adapt to the occasion** (a graduation asks who is graduating, not where you’re flying);
 3. builds a **personalised photo checklist** in three sizes — Simple (10–20 ideas), Deluxe (20–50) and Extravagant (50–100) — grouped into Destinations & places, People, Food & drink, Details and Memories, with recommended counts, attach-a-photo, skip, edit and custom prompts;
 4. takes **photo uploads** (multi-select, camera, drag-and-drop) with thumbnails, captions, favourites, chapters and reordering;
-5. offers **eight album styles** previewed with your own photos — including two professional photo-book styles (Gallery: full-bleed, hairline gutters, panoramic spreads; Bold Graphic: colour-block poster covers with big type and an illustration) — in three book shapes (portrait 8 × 10, landscape 11 × 8.5, square 12 × 12);
+5. offers **nine album styles** previewed with your own photos — including two professional photo-book styles (Gallery: full-bleed, hairline gutters, panoramic spreads; Bold Graphic: colour-block poster covers with big type and an illustration) — plus a Brag Book, in four book shapes (portrait 8 × 10, landscape 11 × 8.5, square 12 × 12, pocket 6 × 6);
 6. **lays the album out automatically** with a deterministic layout engine (51 page layouts);
 7. lets you **edit** it in a page-turning book view (layouts, swap/replace photos, crop/zoom, text, add/remove/reorder pages, restyle, redesign);
 8. **saves everything locally** (IndexedDB) with autosave and a visible save status;

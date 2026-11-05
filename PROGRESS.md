@@ -20,7 +20,7 @@
 | Multi-select "Who's in the photos?" + many more ideas | ✅ Owner feedback round 2: standard albums now 16–36 ideas (was 9–23), long 22–52; family + friends gets ideas for both and together |
 | Hosting | GitHub Pages workflow ready (`deploy.yml`); needs Settings → Pages → GitHub Actions and a public repo (or paid plan) |
 | Album sizes Simple / Deluxe / Extravagant (10–20 / 20–50 / 50–100 ideas) | ✅ Owner feedback round 3; free for everyone (owner decision); built so sizes could become paid later |
-| Animated examples | ✅ "See what it makes" on the home page and a shareable page at `#/examples`: an example album (illustrations, labelled as such) laid out by the real engine, turning pages and cycling all six styles. Pauses off screen, on tap, and for reduced motion. Owner feedback round 4 |
+| Animated examples | ✅ "See what it makes" on the home page and a shareable page at `#/examples`: an example album of 16 public-domain (CC0) photos from Wikimedia Commons, credited at `#/credits`, laid out by the real engine, turning pages and cycling all nine styles. Pauses off screen, on tap, and for reduced motion. Owner feedback round 4 |
 | Review round (owner: "make it slick") | ✅ Smart selection (duplicates/blur, on-device), smart crop centres, backup/restore files, undo/redo, folded checklist + "Photography tips", "More options" in the questions form, returning users see their albums first, compact phone editor toolbar, privacy page (`#/privacy`); verified no requests leave the site |
 | Photo-book vision (owner references: Rapid Studio brag book, Souvence, PikPerfect) | ✅ Book shapes (portrait / landscape 11 × 8.5 / square 12 × 12), generated professional layouts, two-page spreads (incl. panoramas) on screen and in print, Gallery and Bold Graphic styles, poster covers with 16 illustrations; occasions suggest shape + style (weddings → square Gallery) |
 | Photo-book extras (owner: "like the images I sent") | ✅ Journal pages (heading + the photos' own captions, PikPerfect-style), corner-title photo covers, Black & white per photo (screen + PDF), Brag Book style with a 6 × 6 in pocket shape (one edge-to-edge photo per page), optional "Cover words" for posters (e.g. SICILY / Dolce), boat + lighthouse illustrations. Checked in headless Chromium with 15 real photos (Kodak test set, testing only, not bundled) |
@@ -32,10 +32,9 @@
 1. Open the site on a real iPhone and Android phone, fix what turns up.
 2. **App Store and Google Play (owner goal):** wrap the web app with Capacitor (keeps IndexedDB, the photo picker and PDF export), add native photo-library access and file sharing, then TestFlight / internal testing. Needs the owner's Apple Developer account (US$99/year) and Google Play developer account (US$25 once), privacy labels and store listings. Store submissions only with the owner's go-ahead.
 3. Order one real test print (e.g. a photo-book service that takes 8 × 10 in PDFs with 1/8 in bleed) to check colours, trim and binding margins.
-4. Public-domain sample photos for the examples page (needs the sandbox network to allow Wikimedia/Unsplash, and the owner's choice of photos and credits).
-5. Touch drag-to-reorder for photos and pages.
-6. Put the end-to-end Playwright flow in the repo and CI.
-7. Name clearance (trademark, domain, app stores).
+4. Touch drag-to-reorder for photos and pages.
+5. Put the end-to-end Playwright flow in the repo and CI.
+6. Name clearance (trademark, domain, app stores).
 
 ## Key decisions
 

@@ -17,8 +17,8 @@ describe('home-page example album', () => {
     }
   });
 
-  it('serves an illustration for every example photo and nothing else', () => {
-    for (const p of DEMO_PHOTOS) expect(demoSrc(p.id)).toMatch(/^data:image\/svg\+xml/);
+  it('serves a bundled photo for every example and nothing else', () => {
+    for (const p of DEMO_PHOTOS) expect(demoSrc(p.id)).toMatch(/\.jpg/);
     expect(demoSrc('someone-elses-photo')).toBeUndefined();
   });
 });

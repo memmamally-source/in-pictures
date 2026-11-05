@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { DEMO_PHOTO_MAP, demoAlbum, demoSrc } from '@/demo/demoAlbum';
 import { THEMES } from '@/layouts/themes';
@@ -107,7 +108,13 @@ export function Showcase() {
           format={format}
         />
       </div>
-      <p className="mt-3 text-center text-xs text-muted">Example album. Illustrations stand in for your photos; every page was laid out automatically.</p>
+      <p className="mt-3 text-center text-xs text-muted">
+        Example album with public-domain photos (
+        <Link to="/credits" className="underline underline-offset-2">
+          credits
+        </Link>
+        ). Every page was laid out automatically.
+      </p>
     </section>
   );
 }
