@@ -84,6 +84,10 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 
 **Printing limitations:** there’s no bleed, no crop marks and no CMYK/colour profile, and text is rasterised. The export is fine for screens and home printing but **not** set up for professional print shops. A print-partner integration would need a bleed-aware renderer (frames touching the edge extended by 0.125 in) and the partner’s size templates. The page-unit geometry makes that a renderer change, not a layout change.
 
+## 4b. Example album (home page)
+
+`src/demo/` builds an imaginary seaside album from 14 illustrated scenes (`scenes.ts`, SVG generated in code — no stock photos) and runs it through the real generator for each style (`demoAlbum.ts`). `Showcase` (home page and `#/examples`) shows it in the book viewer, turning pages every 2.6 s and moving to the next style at the end. `PageView`/`BookViewer` take a `resolveSrc` so example pictures don't come from storage. It's labelled as an example on screen.
+
 ## 5. Storage, autosave, recovery
 
 - IndexedDB (`idb`), database `in-pictures`: `projects` (JSON), `photos` (metadata, indexed by project), `blobs` (`<photoId>:thumb|display|full`).

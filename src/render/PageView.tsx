@@ -27,6 +27,8 @@ export interface PageViewProps {
   onSlotPointerDown?: (slot: number, e: ReactPointerEvent<SVGElement>) => void;
   className?: string;
   title?: string;
+  /** Supplies image URLs directly instead of from storage (the home-page example). */
+  resolveSrc?: (photoId: string) => string | undefined;
 }
 
 const rot = (xf?: Xform) => (xf ? `rotate(${xf.rot} ${xf.cx} ${xf.cy})` : undefined);
@@ -50,15 +52,17 @@ function Parts({ parts, shadeId }: { parts: ResolvedPart[]; shadeId: string }) {
   );
 }
 
-function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown }: {
+function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown, resolveSrc }: {
   op: FrameOp;
   ids: { shadow: string; clip: string };
   variant: Variant;
   showEmpty?: boolean;
   selected?: boolean;
   onPointerDown?: (e: ReactPointerEvent<SVGElement>) => void;
+  resolveSrc?: (photoId: string) => string | undefined;
 }) {
-  const url = usePhotoUrl(op.photo?.id, variant);
+  const stored = usePhotoUrl(resolveSrc ? null : op.photo?.id, variant);
+  const url = (op.photo && resolveSrc?.(op.photo.id)) || stored;
   const clipId = `${ids.clip}-${op.slot}`;
   const { inner } = op;
   let image = null;
@@ -97,7 +101,7 @@ function FrameView({ op, ids, variant, showEmpty, selected, onPointerDown }: {
   );
 }
 
-export const PageView = memo(function PageView({ page, theme, photos, variant = 'display', showEmpty, selectedSlot, onSlotPointerDown, className, title }: PageViewProps) {
+export const PageView = memo(function PageView({ page, theme, photos, variant = 'display', showEmpty, selectedSlot, onSlotPointerDown, className, title, resolveSrc }: PageViewProps) {
   const fonts = useFontsVersion();
   const uid = useId().replace(/:/g, '');
   const scene = useMemo(() => buildScene({ page, theme, photos, measure: browserMeasure }), [page, theme, photos, fonts]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -137,6 +141,7 @@ export const PageView = memo(function PageView({ page, theme, photos, variant = 
               showEmpty={showEmpty}
               selected={selectedSlot === op.slot}
               onPointerDown={onSlotPointerDown ? (e) => onSlotPointerDown(op.slot, e) : undefined}
+              resolveSrc={resolveSrc}
             />
           );
         }

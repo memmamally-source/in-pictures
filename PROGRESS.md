@@ -18,6 +18,7 @@
 | Multi-select "Who's in the photos?" + many more ideas | ✅ Owner feedback round 2: standard albums now 16–36 ideas (was 9–23), long 22–52; family + friends gets ideas for both and together |
 | Hosting | GitHub Pages workflow ready (`deploy.yml`); needs Settings → Pages → GitHub Actions and a public repo (or paid plan) |
 | Album sizes Simple / Deluxe / Extravagant (10–20 / 20–50 / 50–100 ideas) | ✅ Owner feedback round 3; free for everyone (owner decision); built so sizes could become paid later |
+| Animated examples | ✅ "See what it makes" on the home page and a shareable page at `#/examples`: an example album (illustrations, labelled as such) laid out by the real engine, turning pages and cycling all six styles. Pauses off screen, on tap, and for reduced motion. Owner feedback round 4 |
 | Live site | ✅ https://memmamally-source.github.io/in-pictures/ (Pages on, deploys from `main`) |
 | Physical phone testing | ❌ Not done |
 

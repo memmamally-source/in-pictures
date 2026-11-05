@@ -20,7 +20,7 @@ export function pagesOfSpread(spread: number, count: number): number[] {
   return [2 * spread - 1, 2 * spread].filter((i) => i < count);
 }
 
-export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, selectedSlot, editing }: {
+export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, selectedSlot, editing, resolveSrc, keyboard = true }: {
   pages: AlbumPage[];
   theme: ThemeDef;
   photos: Map<string, Photo>;
@@ -29,6 +29,9 @@ export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, se
   onSlot?: (page: number, slot: number) => void;
   selectedSlot: number | null;
   editing: boolean;
+  resolveSrc?: (photoId: string) => string | undefined;
+  /** Arrow keys turn pages (off for the home-page example). */
+  keyboard?: boolean;
 }) {
   const wide = useMedia('(min-width: 900px)');
   // Direction of the last turn, derived from index changes (buttons, swipe, strip or keys).
@@ -55,6 +58,7 @@ export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, se
     goRef.current = go;
   });
   useEffect(() => {
+    if (!keyboard) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest('input, textarea, select, [role="dialog"]')) return;
@@ -63,7 +67,7 @@ export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, se
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [keyboard]);
 
   const atStart = wide ? spread === 0 : current === 0;
   const atEnd = wide ? spread === lastSpread : current === count - 1;
@@ -97,12 +101,12 @@ export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, se
           if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
         }}
       >
-        <div className={`book-shadow relative flex w-full ${wide && visible.length === 1 ? 'justify-end' : ''}`} style={{ perspective: 2000 }}>
+        <div className={`relative flex w-full ${wide && visible.length === 1 ? 'justify-end' : ''}`} style={{ perspective: 2000 }}>
           {wide && visible.length === 1 && visible[0] === 0 && <div className="w-1/2" />}
           {visible.map((i, pos) => (
             <div
               key={`${i}-${pages[i].id}`}
-              className={`relative ${wide ? 'w-1/2' : 'w-full'} ${editing && current === i && wide ? 'z-10 outline-2 outline-offset-2 outline-pop' : ''}`}
+              className={`book-shadow relative ${wide ? 'w-1/2' : 'w-full'} ${editing && current === i && wide ? 'z-10 outline-2 outline-offset-2 outline-pop' : ''}`}
               style={anim(pos)}
               onClick={() => current !== i && onSelect(i)}
             >
@@ -114,6 +118,7 @@ export function BookViewer({ pages, theme, photos, current, onSelect, onSlot, se
                 selectedSlot={current === i ? selectedSlot : null}
                 onSlotPointerDown={editing && onSlot ? (slot, e) => (e.stopPropagation(), onSlot(i, slot)) : undefined}
                 title={`Page ${i + 1}`}
+                resolveSrc={resolveSrc}
               />
               {wide && visible.length === 2 && (
                 <div className={`pointer-events-none absolute inset-y-0 ${pos === 0 ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} w-6 from-black/15 to-transparent`} />

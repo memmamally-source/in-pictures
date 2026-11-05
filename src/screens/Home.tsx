@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
+import { Showcase } from '@/components/Showcase';
 import { StorageNotice } from '@/components/StorageNotice';
 import { Button, ButtonLink, Confirm, Field, Sheet, TINTS, inputClass } from '@/components/ui';
 import { Brand } from '@/config/brand';
@@ -38,9 +39,14 @@ export function Home() {
               <ButtonLink to="/new?have=1" size="lg" variant="secondary" icon="image">
                 I already have photos
               </ButtonLink>
+              <ButtonLink to="/examples" size="lg" variant="ghost" icon="play">
+                See examples
+              </ButtonLink>
             </div>
           </div>
         </section>
+
+        <Showcase />
 
         <section className="mt-10" aria-labelledby="ideas">
           <div className="flex items-end justify-between">
