@@ -17,17 +17,17 @@ Occasions are assembled from parts instead of written out as fixed lists:
 
 | Part | Where | Role |
 | --- | --- | --- |
-| Shot library | `shots.ts`, `moreShots.ts` | 96 reusable prompts (departure, landmark, couple portrait, cake, family portrait, friends together…) with category, default chapter, priority and an optional condition. With occasion-only ideas there are 445 distinct ideas; each occasion has 29–61 before conditions and album length filter them |
+| Shot library | `shots.ts`, `moreShots.ts` | 119 reusable prompts (departure, landmark, couple portrait, cake, family portrait, friends together…, plus 23 photo-craft ideas in `craftShots.ts` added to every occasion) with category, default chapter, priority and an optional condition. With occasion-only ideas there are 678 distinct ideas across 22 occasions |
 | Occasion | `occasions.ts` | 20 entries: chapters (story order, one marked `ending`), the questions to ask, shot references (by id, optionally overridden) plus occasion-only shots, suggested themes and a title template |
 | Conditions | `Condition` | keep a shot only for certain groups (`groups` = any selected, `allGroups` = all selected, e.g. family *and* friends; `notGroups` = drop when every selected group is listed), with/without children, trip length (`minDays`), a named honoree, an occasion answer (`extra`, `extraEquals`), group size |
 | Target rules | `TargetRule` | counts that scale: `base + perDay × (days − 1) + perPerson × (people − 1)`, capped |
 | Per-day shots | `perDay: true` | one prompt per day (“Day 2 (Tue 2 Jun): highlight of the day”) up to 7 days, then one prompt with a target of N |
 | Tokens | `{location}`, `{honoree}`, `{names}`, `{year}`, `{extra:id}` | filled only from the user’s answers; when an answer is missing the shot’s `fallbackTitle` is used — nothing is invented |
-| Album length | short / standard / long | includes priority 1, ≤2 or ≤3 shots |
+| Album size | Simple / Deluxe / Extravagant (`TIERS` in `planner.ts`) | 10–20, 20–50 or 50–100 ideas: starts from priority 1, ≤2 or ≤3, tops up with the next most important ideas to reach the minimum, trims the least important to stay under the maximum. Bigger sizes only add ideas. A test checks every occasion and every group lands in range |
 
 `buildPlan(occasion, answers)` is deterministic with stable item ids, so `mergePlan` can rebuild the plan after the user edits their details while keeping skips, ticks, edited titles/targets and custom prompts.
 
-The combinations come from 20 occasions × 5 group types × children yes/no × trip length × occasion-specific answers × 3 lengths × 7 moods, on the planning side, and 6 themes × 51 layouts on the design side. None of these are stored as separate templates.
+The combinations come from 22 occasions × any mix of 5 group types × children yes/no × trip length × occasion-specific answers × 3 sizes × 7 moods, on the planning side, and 6 themes × 51 layouts on the design side. None of these are stored as separate templates.
 
 **Who's in the photos** is multi-select (`Answers.groups`): "Just me" stands alone, the others combine. Albums saved with the older single `group` are upgraded on load (`normaliseAnswers`).
 
@@ -58,12 +58,12 @@ File: `src/engine/generate.ts`. Deterministic heuristics; no AI.
 
 1. **Sections.** If photos have chapters (set by hand, or inherited from the checklist prompt they’re attached to), sections follow the occasion’s chapter order. Unsorted photos are grouped by capture day (EXIF) and placed before the ending chapter. If no photo has a chapter, sections are capture days (or months for long spans) when ≥70% of photos have dates; otherwise there is one section. One-photo sections are folded into a neighbour.
 2. **Cover:** the chosen cover photo, else the first favourite, else the first photo. The cover layout is the one that crops it least. With 8+ photos the cover photo isn’t repeated inside.
-3. **Chapter openers:** only with 2+ sections, only for sections of 3+ photos, the largest first, capped by length (2 / 4 / 8). Photo openers use a favourite that fits.
+3. **Chapter openers:** only with 2+ sections, only for sections of 3+ photos, the largest first, capped by size (2 / 4 / 8). Photo openers use a favourite that fits.
 4. **Pages:** each section is split by dynamic programming over consecutive runs of 1–6 photos. For each run, every layout allowed by the theme is scored:
    - **crop loss** per photo (`1 − min(ar_photo/ar_frame, ar_frame/ar_photo)`), weighted towards large frames, with a steep penalty past 42%; the best photo-to-frame assignment is found by trying every permutation (greedy by aspect for 6);
    - **favourites** outside the hero slot cost more; a favourite alone on a page gets a bonus;
    - **captions**: layouts that reserve caption space need captions; captioned photos prefer layouts that show them;
-   - **density**: a per-photo penalty for straying from the target photos per page (short 3.4, standard 2.5, long 1.7), so the page count isn’t biased;
+   - **density**: a per-photo penalty for straying from the target photos per page (Simple 3.4, Deluxe 2.5, Extravagant 1.9), so the page count isn’t biased;
    - **variety** between neighbouring pages: no back-to-back repeats of a layout, nor two full-bleed pages in a row, and a mix of photo counts;
    - small seeded jitter, so **Redesign** (new seed) gives a different but equally valid result.
 5. **Closing:** with 10+ photos the last photo of the story gets a closing photo page; otherwise a text page. Only the user’s title, dates, names and closing note are used.

@@ -1,3 +1,4 @@
+import { CRAFT_SHOTS } from './craftShots';
 import { LIBRARY_EXTRA } from './moreShots';
 import type { ShotDef } from './schema';
 
@@ -75,4 +76,4 @@ const list: ShotDef[] = [
   { id: 'handwriting', title: 'Something handwritten', hint: 'A note, a list, a drawing.', category: 'details', chapter: 'everyday', priority: 3 },
 ];
 
-export const SHOT_LIBRARY: Record<string, ShotDef> = Object.fromEntries([...list, ...LIBRARY_EXTRA].map((s) => [s.id, s]));
+export const SHOT_LIBRARY: Record<string, ShotDef> = Object.fromEntries([...list, ...LIBRARY_EXTRA, ...CRAFT_SHOTS].map((s) => [s.id, s]));

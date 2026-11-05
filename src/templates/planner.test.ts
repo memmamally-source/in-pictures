@@ -12,7 +12,7 @@ const answers = (over: Partial<Answers> = {}): Answers => ({
   names: [],
   children: false,
   mood: 'romantic',
-  length: 'standard',
+  length: 'deluxe',
   mode: 'plan',
   extras: {},
   ...over,
@@ -22,8 +22,8 @@ const titles = (occasionId: string, a: Answers) => buildPlan(getOccasion(occasio
 const shotIds = (occasionId: string, a: Answers) => buildPlan(getOccasion(occasionId), a).map((i) => i.shotId);
 
 describe('occasion catalogue', () => {
-  it('has the 20 required categories, each with distinct shots', () => {
-    expect(OCCASIONS).toHaveLength(20);
+  it('has the 20 required categories plus date nights and work events, each with distinct shots', () => {
+    expect(OCCASIONS).toHaveLength(22);
     const signatures = new Set(OCCASIONS.map((o) => resolveShots(o).map((s) => s.id).sort().join(',')));
     expect(signatures.size).toBe(OCCASIONS.length);
   });
@@ -39,7 +39,7 @@ describe('occasion catalogue', () => {
   it('produces a non-empty plan for every occasion and group', () => {
     for (const o of OCCASIONS) {
       for (const group of o.questions.groupOptions ?? (['solo', 'couple', 'family', 'friends', 'group'] as const)) {
-        const plan = buildPlan(o, answers({ groups: [group], participants: group === 'solo' ? 1 : 4, length: 'short' }));
+        const plan = buildPlan(o, answers({ groups: [group], participants: group === 'solo' ? 1 : 4, length: 'simple' }));
         expect(plan.length, `${o.id}/${group}`).toBeGreaterThan(2);
         expect(new Set(plan.map((p) => p.id)).size).toBe(plan.length);
       }
@@ -50,7 +50,9 @@ describe('occasion catalogue', () => {
     expect(searchOccasions('honeymoon').map((o) => o.id)).toEqual(['honeymoon']);
     expect(searchOccasions('rollercoaster').map((o) => o.id)).toEqual(['theme-park']);
     expect(searchOccasions('DOG').map((o) => o.id)).toContain('pets');
-    expect(searchOccasions('')).toHaveLength(20);
+    expect(searchOccasions('')).toHaveLength(22);
+    expect(searchOccasions('office party').map((o) => o.id)).toEqual(['work-event']);
+    expect(searchOccasions('date night').map((o) => o.id)).toContain('date-night');
   });
 });
 
@@ -118,8 +120,8 @@ describe('personalised plans', () => {
 
   it('album length controls how many prompts appear', () => {
     const n = (length: Answers['length']) => buildPlan(getOccasion('wedding'), answers({ groups: ['group'], length, extras: { role: 'couple' } })).length;
-    expect(n('short')).toBeLessThan(n('standard'));
-    expect(n('standard')).toBeLessThan(n('long'));
+    expect(n('simple')).toBeLessThan(n('deluxe'));
+    expect(n('deluxe')).toBeLessThan(n('extravagant'));
   });
 
   it('occasion-specific choices change the plan (wedding guest vs couple)', () => {
@@ -161,16 +163,53 @@ describe('more than one group', () => {
   });
 });
 
-describe('idea counts', () => {
-  it('every occasion offers plenty of ideas, and short albums still get a useful core', () => {
+describe('album sizes (Simple / Deluxe / Extravagant)', () => {
+  const ranges = { simple: [10, 20], deluxe: [20, 50], extravagant: [50, 100] } as const;
+  it('every occasion and every allowed group lands inside each size’s idea range', () => {
+    const misses: string[] = [];
     for (const o of OCCASIONS) {
       const extras = Object.fromEntries((o.questions.extras ?? []).map((e) => [e.id, e.type === 'text' ? '' : e.default]));
-      const groups = [o.questions.groupDefault];
-      const a = (length: Answers['length']) => answers({ groups, participants: 4, length, extras, location: 'X', honoree: 'Sam', days: 3 });
-      expect(buildPlan(o, a('standard')).length, `${o.id} standard`).toBeGreaterThanOrEqual(20);
-      expect(buildPlan(o, a('long')).length, `${o.id} long`).toBeGreaterThanOrEqual(24);
-      expect(buildPlan(o, a('short')).length, `${o.id} short`).toBeGreaterThanOrEqual(6);
+      for (const g of o.questions.groupOptions ?? (['solo', 'couple', 'family', 'friends', 'group'] as const)) {
+        for (const [length, [min, max]] of Object.entries(ranges) as [Answers['length'], readonly [number, number]][]) {
+          const n = buildPlan(o, answers({ groups: [g], participants: g === 'solo' ? 1 : 4, length, extras, days: 3 })).length;
+          if (n < min || n > max) misses.push(`${o.id}/${g}/${length}: ${n}`);
+        }
+      }
     }
+    expect(misses).toEqual([]);
+  });
+
+  it('bigger sizes only ever add ideas', () => {
+    const o = getOccasion('birthday');
+    const ids = (length: Answers['length']) => new Set(buildPlan(o, answers({ groups: ['family', 'friends'], length, honoree: 'Maya', extras: { party: true } })).map((i) => i.id));
+    const [s, d, x] = [ids('simple'), ids('deluxe'), ids('extravagant')];
+    expect([...s].every((id) => d.has(id))).toBe(true);
+    expect([...d].every((id) => x.has(id))).toBe(true);
+  });
+
+  it('upgrades the old Short / Standard / Long sizes', () => {
+    expect(normaliseAnswers({ ...answers(), length: 'long' as Answers['length'] }).length).toBe('extravagant');
+    expect(normaliseAnswers({ ...answers(), length: 'short' as Answers['length'] }).length).toBe('simple');
+  });
+});
+
+describe('new occasions', () => {
+  it('date night adapts to the kind of date and to double dates', () => {
+    const dinner = shotIds('date-night', answers({ extras: { 'date-type': 'dinner' } }));
+    const home = shotIds('date-night', answers({ extras: { 'date-type': 'at-home' } }));
+    expect(dinner).toContain('date-table');
+    expect(dinner).not.toContain('date-cook');
+    expect(home).toContain('date-cook');
+    expect(shotIds('date-night', answers({ groups: ['couple', 'friends'], extras: { 'date-type': 'dinner' } }))).toContain('date-double');
+  });
+
+  it('work events adapt to the type of event', () => {
+    const awards = shotIds('work-event', answers({ groups: ['group'], extras: { 'event-type': 'awards' } }));
+    const team = shotIds('work-event', answers({ groups: ['group'], extras: { 'event-type': 'team-day' } }));
+    expect(awards).toEqual(expect.arrayContaining(['w-award', 'w-trophy', 'w-speech']));
+    expect(awards).not.toContain('w-activity');
+    expect(team).toContain('w-activity');
+    expect(team).not.toContain('w-trophy');
   });
 });
 

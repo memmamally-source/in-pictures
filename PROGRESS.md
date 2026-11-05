@@ -11,17 +11,20 @@
 | Area | Status |
 | --- | --- |
 | Full journey (occasion → questions → checklist → photos → style → album → edit → save → PDF) | ✅ Works in headless Chromium (desktop + emulated iPhone 13) |
-| 20 occasions, 445 photo ideas (96 shared), 51 layouts, 6 styles | ✅ |
+| 22 occasions (incl. Date nights, Work events), 678 photo ideas, 51 layouts, 6 styles | ✅ |
 | Local storage, autosave, storage warnings | ✅ IndexedDB `in-pictures` |
 | PDF export 150 / 300 dpi with resolution checks | ✅ Not print-shop ready (no bleed/CMYK) |
 | Bright lifestyle palette | ✅ Owner feedback round 1 |
 | Multi-select "Who's in the photos?" + many more ideas | ✅ Owner feedback round 2: standard albums now 16–36 ideas (was 9–23), long 22–52; family + friends gets ideas for both and together |
 | Hosting | GitHub Pages workflow ready (`deploy.yml`); needs Settings → Pages → GitHub Actions and a public repo (or paid plan) |
+| Album sizes Simple / Deluxe / Extravagant (10–20 / 20–50 / 50–100 ideas) | ✅ Owner feedback round 3; free for everyone (owner decision); built so sizes could become paid later |
+| Live site | ✅ https://memmamally-source.github.io/in-pictures/ (Pages on, deploys from `main`) |
 | Physical phone testing | ❌ Not done |
 
 ## Next
 
-1. Turn on Pages, open the site on a real iPhone and Android phone, fix what turns up.
+1. Open the site on a real iPhone and Android phone, fix what turns up.
+1. **App Store and Google Play (owner goal):** wrap the web app with Capacitor (keeps IndexedDB, the photo picker and PDF export), add native photo-library access and file sharing, then TestFlight / internal testing. Needs the owner's Apple Developer account (US$99/year) and Google Play developer account (US$25 once), privacy labels and store listings. Store submissions only with the owner's go-ahead.
 2. Backup/restore file (albums are lost if the browser clears its data).
 3. Touch drag-to-reorder for photos and pages; undo.
 4. Put the end-to-end Playwright flow in the repo and CI.

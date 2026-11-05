@@ -9,7 +9,7 @@ import { localRepository as repo } from './repository';
 
 const project = (id: string): Project => ({
   id, schemaVersion: 1, occasionId: 'birthday', plan: [], chapters: [], themeId: 'polaroid', step: 'photos', createdAt: 1, updatedAt: 1,
-  answers: { title: 'Maya turns 7', groups: ['family'], participants: 4, names: [], children: true, mood: 'joyful', length: 'standard', mode: 'have-photos', extras: {} },
+  answers: { title: 'Maya turns 7', groups: ['family'], participants: 4, names: [], children: true, mood: 'joyful', length: 'deluxe', mode: 'have-photos', extras: {} },
 });
 const photo = (id: string, projectId: string, order: number, takenAt?: string): Photo => ({
   id, projectId, name: `${id}.jpg`, width: 400, height: 300, originalWidth: 400, originalHeight: 300, addedAt: 0, order, favourite: false, takenAt,

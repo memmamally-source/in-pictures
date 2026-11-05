@@ -31,8 +31,8 @@ export interface Section {
   photos: Photo[];
 }
 
-const DENSITY: Record<AlbumLength, number> = { short: 3.4, standard: 2.5, long: 1.7 };
-const CHAPTER_LIMIT: Record<AlbumLength, number> = { short: 2, standard: 4, long: 8 };
+const DENSITY: Record<AlbumLength, number> = { simple: 3.4, deluxe: 2.5, extravagant: 1.9 };
+const CHAPTER_LIMIT: Record<AlbumLength, number> = { simple: 2, deluxe: 4, extravagant: 8 };
 
 // ── Dates ──────────────────────────────────────────────────
 

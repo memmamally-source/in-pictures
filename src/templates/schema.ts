@@ -33,6 +33,8 @@ export interface Condition {
   /** Extra answer must be truthy (or equal the given value). */
   extra?: string;
   extraEquals?: [string, string];
+  /** Extra answer is one of these values. */
+  extraIn?: [string, string[]];
   extraNot?: string;
   minParticipants?: number;
 }

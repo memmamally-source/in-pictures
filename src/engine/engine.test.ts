@@ -15,7 +15,7 @@ import { buildSections, formatDateRange, generateAlbum, paginate } from './gener
 
 const answers = (over: Partial<Answers> = {}): Answers => ({
   title: 'Honeymoon in Greece', location: 'Greece', groups: ['couple'], participants: 2, names: ['Anna', 'Ben'], children: false,
-  mood: 'romantic', length: 'standard', mode: 'have-photos', extras: {}, ...over,
+  mood: 'romantic', length: 'deluxe', mode: 'have-photos', extras: {}, ...over,
 });
 
 function project(over: Partial<Project> = {}): Project {
@@ -187,8 +187,8 @@ describe('album generation', () => {
   it('respects album length: short albums are denser', () => {
     const ph = photos(48);
     const pagesFor = (length: Answers['length']) => generateAlbum({ project: project({ answers: answers({ length }) }), photos: ph, seed: 1 }).pages.length;
-    expect(pagesFor('short')).toBeLessThan(pagesFor('standard'));
-    expect(pagesFor('standard')).toBeLessThan(pagesFor('long'));
+    expect(pagesFor('simple')).toBeLessThan(pagesFor('deluxe'));
+    expect(pagesFor('deluxe')).toBeLessThan(pagesFor('extravagant'));
   });
 
   it('avoids heavy crops: every placed photo keeps most of its area', () => {
@@ -233,7 +233,7 @@ describe('album generation', () => {
   });
 
   it('uses chapter openers sparingly and only for real sections', () => {
-    const p = project({ answers: answers({ length: 'short' }) });
+    const p = project({ answers: answers({ length: 'simple' }) });
     const ids = Object.fromEntries(p.plan.map((i) => [i.shotId, i.id]));
     const keys = ['departure', 'first-view', 'local-food', 'sunset', 'final-day'];
     const ph = photos(40, (i) => ({ planItemId: ids[keys[i % 5]] }));

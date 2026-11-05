@@ -16,7 +16,7 @@ import { getOccasion } from '@/templates/occasions';
 export function useThemePreview(project: Project, photos: Photo[], themeId: ThemeId) {
   return useMemo(() => {
     const sample = photos.slice(0, 9);
-    const album: Album = generateAlbum({ project: { ...project, themeId, answers: { ...project.answers, length: 'standard' } }, photos: sample, seed: 11 });
+    const album: Album = generateAlbum({ project: { ...project, themeId, answers: { ...project.answers, length: 'deluxe' } }, photos: sample, seed: 11 });
     const interior = album.pages.filter((p) => getLayout(p.layoutId).kind === 'photos');
     // Always show a chapter opener too: it's where each style's boldest colours live.
     const chapter = album.pages.find((p) => getLayout(p.layoutId).kind === 'chapter') ?? {

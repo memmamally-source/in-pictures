@@ -21,9 +21,9 @@ const MOODS: { id: Mood; label: string }[] = [
 ];
 
 const LENGTHS: { id: AlbumLength; label: string; help: string }[] = [
-  { id: 'short', label: 'Short', help: 'Fewer pages, more photos on each. Core shots only.' },
-  { id: 'standard', label: 'Standard', help: 'A balanced book.' },
-  { id: 'long', label: 'Long', help: 'More single-photo pages and extra photo ideas.' },
+  { id: 'simple', label: 'Simple', help: '10–20 photo ideas: the essentials. A compact album with fuller pages.' },
+  { id: 'deluxe', label: 'Deluxe', help: '20–50 photo ideas: a well-rounded album.' },
+  { id: 'extravagant', label: 'Extravagant', help: '50–100 photo ideas: every angle and detail, with more statement pages.' },
 ];
 
 function defaults(o: OccasionDef, have: boolean): Answers {
@@ -37,7 +37,7 @@ function defaults(o: OccasionDef, have: boolean): Answers {
     names: [],
     children: false,
     mood: o.defaultMood,
-    length: o.defaultLength ?? 'standard',
+    length: o.defaultLength ?? 'deluxe',
     mode: have ? 'have-photos' : 'plan',
     extras,
   };
@@ -196,7 +196,7 @@ export function Personalise({ edit }: { edit?: boolean }) {
             </div>
           </Field>
 
-          <Field label="Album length" hint={LENGTHS.find((l) => l.id === a.length)?.help}>
+          <Field label="Album size" hint={LENGTHS.find((l) => l.id === a.length)?.help}>
             <div className="flex flex-wrap gap-2">
               {LENGTHS.map((l) => (
                 <Chip key={l.id} selected={a.length === l.id} onClick={() => set({ length: l.id })}>

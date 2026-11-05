@@ -1,4 +1,4 @@
-import type { Answers, Chapter, GroupType, PlanItem } from '@/domain/types';
+import type { AlbumLength, Answers, Chapter, GroupType, PlanItem } from '@/domain/types';
 
 import type { Condition, OccasionDef, ShotDef, TargetRule } from './schema';
 import { SHOT_LIBRARY } from './shots';
@@ -66,6 +66,7 @@ export function matches(when: Condition | undefined, a: Answers, days: number): 
   if (when.extra && !a.extras[when.extra]) return false;
   if (when.extraNot && a.extras[when.extraNot]) return false;
   if (when.extraEquals && a.extras[when.extraEquals[0]] !== when.extraEquals[1]) return false;
+  if (when.extraIn && !when.extraIn[1].includes(String(a.extras[when.extraIn[0]] ?? ''))) return false;
   if (when.minParticipants !== undefined && a.participants < when.minParticipants) return false;
   return true;
 }
@@ -78,7 +79,18 @@ export function computeTarget(t: number | TargetRule | undefined, a: Answers, da
   return Math.max(1, Math.min(t.max ?? 99, Math.round(raw)));
 }
 
-const PRIORITY_FOR_LENGTH = { short: 1, standard: 2, long: 3 } as const;
+/**
+ * Album sizes, in photo ideas. Each tier starts from the ideas at or above
+ * its priority (1 = essential), tops up with the next most important ideas to
+ * reach `min`, and trims the least important to stay within `max`.
+ */
+export const TIERS: Record<AlbumLength, { min: number; max: number; priority: 1 | 2 | 3; label: string }> = {
+  simple: { min: 10, max: 20, priority: 1, label: 'Simple' },
+  deluxe: { min: 20, max: 50, priority: 2, label: 'Deluxe' },
+  extravagant: { min: 50, max: 100, priority: 3, label: 'Extravagant' },
+};
+
+const OLD_LENGTHS: Record<string, AlbumLength> = { short: 'simple', standard: 'deluxe', long: 'extravagant' };
 
 /**
  * Library shots name a generic chapter ("together", "end"…). When an occasion
@@ -137,23 +149,41 @@ function shortDate(iso: string | undefined, offsetDays: number): string {
 }
 
 export function buildPlan(occasion: OccasionDef, a: Answers): PlanItem[] {
+  const tier = TIERS[a.length] ?? TIERS.deluxe;
+  const all = candidates(occasion, a);
+  // Start from the tier's priority, top up to the minimum, trim to the maximum.
+  const keep = new Set(all.filter((c) => c.priority <= tier.priority).map((c) => c.order));
+  const byImportance = [...all].sort((x, y) => x.priority - y.priority || x.order - y.order);
+  for (const c of byImportance) {
+    if (keep.size >= tier.min) break;
+    keep.add(c.order);
+  }
+  for (const c of [...byImportance].reverse()) {
+    if (keep.size <= tier.max) break;
+    keep.delete(c.order);
+  }
+  return all.filter((c) => keep.has(c.order)).map((c) => c.item);
+}
+
+/** Every idea that fits the answers, in story order, with its priority. */
+function candidates(occasion: OccasionDef, a: Answers): { item: PlanItem; priority: number; order: number }[] {
   const days = tripDays(a);
-  const maxPriority = PRIORITY_FOR_LENGTH[a.length];
-  const items: PlanItem[] = [];
+  const items: { item: PlanItem; priority: number; order: number }[] = [];
+  const push = (item: PlanItem, priority: number) => items.push({ item, priority, order: items.length });
   for (const shot of resolveShots(occasion)) {
-    if ((shot.priority ?? 2) > maxPriority) continue;
     if (!matches(shot.when, a, days)) continue;
+    const priority = shot.priority ?? 2;
     const title = fillTokens(shot.title, a) ?? shot.fallbackTitle ?? shot.title.replace(/\{[\w:-]+\}/g, '').trim();
     const base = { title, hint: shot.hint, category: shot.category, chapter: shot.chapter, shotId: shot.id };
     if (shot.perDay && days > 1 && days <= 7) {
       for (let d = 0; d < days; d++) {
         const when = shortDate(a.startDate, d);
-        items.push({ ...base, id: `${shot.id}#${d + 1}`, title: `Day ${d + 1}${when ? ` (${when})` : ''}: ${title.toLowerCase()}`, target: 1 });
+        push({ ...base, id: `${shot.id}#${d + 1}`, title: `Day ${d + 1}${when ? ` (${when})` : ''}: ${title.toLowerCase()}`, target: 1 }, priority);
       }
     } else if (shot.perDay && days > 7) {
-      items.push({ ...base, id: shot.id, title: `${title} — one for each day`, target: days });
+      push({ ...base, id: shot.id, title: `${title} — one for each day`, target: days }, priority);
     } else {
-      items.push({ ...base, id: shot.id, target: computeTarget(shot.target, a, days) });
+      push({ ...base, id: shot.id, target: computeTarget(shot.target, a, days) }, priority);
     }
   }
   return items;
@@ -197,9 +227,10 @@ export function defaultParticipants(groups: GroupType[]): number {
 
 /** Answers saved before multi-select had a single `group`. */
 export function normaliseAnswers(a: Answers & { group?: GroupType }): Answers {
-  if (Array.isArray(a.groups) && a.groups.length) return a;
+  const length = OLD_LENGTHS[a.length as string] ?? a.length;
+  if (Array.isArray(a.groups) && a.groups.length) return length === a.length ? a : { ...a, length };
   const { group, ...rest } = a;
-  return { ...rest, groups: [group ?? 'solo'] };
+  return { ...rest, length, groups: [group ?? 'solo'] };
 }
 
 /** "Just me" can't be combined; the others can (e.g. family + friends). */

@@ -8,7 +8,8 @@
 export type ThemeId = 'minimal' | 'scrapbook' | 'polaroid' | 'romantic' | 'travel' | 'heritage';
 export type GroupType = 'solo' | 'couple' | 'family' | 'friends' | 'group';
 export type Mood = 'joyful' | 'romantic' | 'calm' | 'adventurous' | 'nostalgic' | 'elegant' | 'playful';
-export type AlbumLength = 'short' | 'standard' | 'long';
+/** Album size: how many photo ideas the checklist offers (see TIERS in planner.ts). */
+export type AlbumLength = 'simple' | 'deluxe' | 'extravagant';
 export type StartMode = 'plan' | 'have-photos';
 export type ProjectStep = 'plan' | 'photos' | 'style' | 'album';
 
