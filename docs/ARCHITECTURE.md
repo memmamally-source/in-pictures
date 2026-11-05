@@ -94,6 +94,8 @@ PDF (`src/export/pdf.ts`, jsPDF loaded on demand): one canvas per page at 150 or
 
 ## 4b. Example album (home page)
 
+**Two kinds of album.** `ThemeDef.kind` is `photobook` or `scrapbook` (`ALBUM_KINDS`, `themesOfKind`, `recommendThemes(…, kind)` in `layouts/themes.ts`). The kind is not stored separately: it is the kind of the album's style. `engine/kinds.ts` has `suggestedFormat` (photo albums take the occasion's shape, scrapbooks their own) and `switchTheme` (same kind: restyle the pages; other kind: redesign in the new shape). New albums take `?kind=` through `/new` and `/new/:occasion`.
+
 `src/demo/` builds an example seaside album from 16 CC0 photos from Wikimedia Commons (`photos/`, resized to 1100 px; titles, authors and links in `photos.ts`, shown at `#/credits`) and runs it through the real generator for each style (`demoAlbum.ts`). `Showcase` (home page and `#/examples`) shows it in the book viewer, turning pages every 2.6 s and moving to the next style at the end. `PageView`/`BookViewer` take a `resolveSrc` so example pictures don't come from storage. It's labelled as an example on screen.
 
 ## 4c. Quick album

@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
+import { KindToggle } from '@/components/KindPicker';
 import { Button } from '@/components/ui';
 import type { Answers } from '@/domain/types';
+import { ALBUM_KINDS, type AlbumKind } from '@/layouts/themes';
 import { useLibrary } from '@/state/library';
 import { setPendingFiles } from '@/state/pendingFiles';
 import { ACCEPTED, isProbablyImage } from '@/storage/images';
@@ -17,6 +19,7 @@ export function QuickAlbum() {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState<AlbumKind>('photobook');
 
   async function start(files: File[]) {
     const images = files.filter(isProbablyImage);
@@ -26,7 +29,7 @@ export function QuickAlbum() {
       title: QUICK_TITLE, groups: ['family'], participants: 4, names: [], children: false, mood: 'joyful',
       length: sizeForCount(images.length), mode: 'have-photos', extras: {},
     };
-    const project = await create('custom', answers, { quick: true });
+    const project = await create('custom', answers, { quick: true, kind });
     setPendingFiles(project.id, images);
     navigate(`/album/${project.id}/album`, { replace: true });
   }
@@ -45,6 +48,10 @@ export function QuickAlbum() {
         <p className="mt-2 text-muted">
           Pick as many as you like. We’ll put them in date order, design every page and give it a title from the dates. You can change anything afterwards.
         </p>
+        <div className="mt-5">
+          <KindToggle value={kind} onChange={setKind} />
+          <p className="mt-2 text-sm text-muted">{ALBUM_KINDS.find((k) => k.id === kind)!.description}</p>
+        </div>
         <input
           ref={input}
           type="file"

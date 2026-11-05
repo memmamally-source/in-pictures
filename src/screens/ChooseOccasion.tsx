@@ -3,7 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
+import { KindToggle } from '@/components/KindPicker';
 import { TINTS, inputClass } from '@/components/ui';
+import { ALBUM_KINDS, isAlbumKind } from '@/layouts/themes';
 import { OCCASIONS, searchOccasions } from '@/templates/occasions';
 
 const FAMILIES = [
@@ -14,10 +16,20 @@ const FAMILIES = [
 ] as const;
 
 export function ChooseOccasion() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [q, setQ] = useState('');
   const results = searchOccasions(q);
-  const suffix = params.get('have') ? '?have=1' : '';
+  const kindParam = params.get('kind');
+  const kind = isAlbumKind(kindParam) ? kindParam : null;
+  const carry = new URLSearchParams();
+  if (params.get('have')) carry.set('have', '1');
+  if (kind) carry.set('kind', kind);
+  const suffix = carry.size ? `?${carry}` : '';
+  const setKind = (k: string) => {
+    const next = new URLSearchParams(params);
+    next.set('kind', k);
+    setParams(next, { replace: true });
+  };
 
   return (
     <div className="min-h-dvh">
@@ -25,6 +37,12 @@ export function ChooseOccasion() {
       <main className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
         <h1 className="mt-6 font-display text-3xl sm:text-4xl">What are we remembering?</h1>
         <p className="mt-2 text-muted">Each occasion comes with its own photo ideas, story structure and suggested styles.</p>
+        <div className="mt-5">
+          <KindToggle value={kind} onChange={setKind} />
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            {kind ? ALBUM_KINDS.find((k) => k.id === kind)!.description : 'Choose the kind of album, or skip it and we’ll suggest one for the occasion. You can switch later.'}
+          </p>
+        </div>
         <div className="relative mt-5">
           <Icon name="search" className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
           <input

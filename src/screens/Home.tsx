@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
+import { KindPicker } from '@/components/KindPicker';
 import { Showcase } from '@/components/Showcase';
 import { StorageNotice } from '@/components/StorageNotice';
 import { Button, ButtonLink, Confirm, Field, Notice, Sheet, TINTS, inputClass } from '@/components/ui';
@@ -74,6 +75,15 @@ export function Home() {
           </div>
         </section>
   );
+  const kinds = (
+        <section className="mt-10" aria-labelledby="kinds">
+          <h2 id="kinds" className="font-display text-2xl">
+            Two kinds of album
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-muted">A professional photo album for printing, or a scrapbook full of personality. Same easy steps.</p>
+          <KindPicker links hrefFor={(k) => `/new?kind=${k}`} className="mt-4" />
+        </section>
+  );
   const showcase = <Showcase />;
   const occasions = (
         <section className="mt-10" aria-labelledby="ideas">
@@ -109,7 +119,7 @@ export function Home() {
     <div className="min-h-dvh">
       <AppHeader right={<ButtonLink to="/new" size="sm" icon="plus" className="hidden sm:inline-flex">Create an album</ButtonLink>} />
       <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-        {(hasAlbums ? [hero, library, showcase, occasions] : [hero, showcase, occasions, library]).map((section, i) => (
+        {(hasAlbums ? [hero, library, kinds, showcase, occasions] : [hero, kinds, showcase, occasions, library]).map((section, i) => (
           <Fragment key={i}>{section}</Fragment>
         ))}
 
@@ -245,7 +255,7 @@ function AlbumCard({ project }: { project: Project }) {
       </Link>
       <div className="mt-2 flex items-start justify-between gap-1">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{project.quick ? 'Quick album' : occasion.name}</p>
+          <p className="truncate text-sm font-medium">{getTheme(project.themeId).kind === 'photobook' ? 'Photo album' : 'Scrapbook'} · {project.quick ? 'Quick' : occasion.name}</p>
           <p className="truncate text-xs text-muted">
             {date || 'No date'} · {project.album ? `${project.album.pages.length} pages` : 'Draft'}
           </p>

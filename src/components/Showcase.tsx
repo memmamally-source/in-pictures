@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { DEMO_PHOTO_MAP, demoAlbum, demoSrc } from '@/demo/demoAlbum';
-import { THEMES } from '@/layouts/themes';
+import { themesOfKind, type AlbumKind } from '@/layouts/themes';
 import { useMedia } from '@/lib/useMedia';
 import { bookViews, pagesIn, singleViews, viewIndexOf } from '@/engine/book';
 import { BookViewer } from '@/screens/editor/BookViewer';
 
+import { KindToggle } from './KindPicker';
 import { Chip, IconButton } from './ui';
 
 const STEP_MS = 2600;
@@ -16,9 +17,11 @@ const STEP_MS = 2600;
  * through every style. Pauses when off screen, when a style is chosen, and
  * for anyone who prefers reduced motion.
  */
-export function Showcase() {
+export function Showcase({ initialKind = 'photobook' }: { initialKind?: AlbumKind }) {
   const reduced = useMedia('(prefers-reduced-motion: reduce)');
   const wide = useMedia('(min-width: 900px)');
+  const [kind, setKind] = useState<AlbumKind>(initialKind);
+  const THEMES = themesOfKind(kind);
   const [pos, setPos] = useState({ theme: 0, page: 0 });
   const [playing, setPlaying] = useState(true);
   const [visible, setVisible] = useState(false);
@@ -58,7 +61,7 @@ export function Showcase() {
       });
     }, STEP_MS);
     return () => clearInterval(t);
-  }, [running, wide]);
+  }, [running, wide, THEMES]);
 
   return (
     <section ref={ref} className="mt-10 overflow-hidden rounded-[2rem] bg-white p-5 shadow-soft sm:p-8" aria-labelledby="showcase">
@@ -68,6 +71,14 @@ export function Showcase() {
             See what it makes
           </h2>
           <p className="mt-1 max-w-xl text-sm text-muted">The same holiday, designed automatically in each style. Tap a style to stop on it.</p>
+          <KindToggle
+            className="mt-3"
+            value={kind}
+            onChange={(k) => {
+              setKind(k);
+              setPos({ theme: 0, page: 0 });
+            }}
+          />
         </div>
         <IconButton
           icon={running ? 'pause' : 'play'}

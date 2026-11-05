@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { Icon } from '@/components/Icon';
 import { Button, Chip, Field, TINTS, Toggle, inputClass } from '@/components/ui';
 import type { AlbumLength, Answers, GroupType, Mood } from '@/domain/types';
+import { isAlbumKind } from '@/layouts/themes';
 import { useLibrary } from '@/state/library';
 import { useProject } from '@/state/project';
 import { getOccasion } from '@/templates/occasions';
@@ -89,13 +90,14 @@ export function Personalise({ edit }: { edit?: boolean }) {
       navigate(-1);
       return;
     }
-    const created = await create(occasion.id, answers);
+    const kindParam = search.get('kind');
+    const created = await create(occasion.id, answers, { kind: isAlbumKind(kindParam) ? kindParam : undefined });
     navigate(`/album/${created.id}/${created.step}`, { replace: true });
   }
 
   return (
     <div className="min-h-dvh">
-      {!edit && <AppHeader back="/new" title={occasion.name} />}
+      {!edit && <AppHeader back={`/new${search.get('kind') ? `?kind=${search.get('kind')}` : ''}`} title={occasion.name} />}
       <main className="mx-auto max-w-2xl px-4 pb-32 sm:px-6">
         {!edit && (
           <div className={`mt-5 flex items-center gap-4 rounded-3xl p-5 ${TINTS[occasion.tint].bg}`}>

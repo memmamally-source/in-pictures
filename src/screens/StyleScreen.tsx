@@ -1,16 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Icon } from '@/components/Icon';
+import { KindToggle } from '@/components/KindPicker';
 import { ShapePicker } from '@/components/ShapePicker';
 import { Button } from '@/components/ui';
 import type { Album, BookFormat, Photo, Project, ThemeId } from '@/domain/types';
-import { applyTheme } from '@/engine/edit';
-import { coverWords, generateAlbum } from '@/engine/generate';
+import { generateAlbum } from '@/engine/generate';
+import { switchTheme } from '@/engine/kinds';
 import { getLayout } from '@/layouts/layouts';
 import { FORMATS } from '@/layouts/schema';
-import { THEMES, getTheme, recommendThemes, type ThemeDef } from '@/layouts/themes';
-import { chooseMotif } from '@/render/motifs';
+import { ALBUM_KINDS, THEMES, getTheme, kindOf, recommendThemes, type AlbumKind, type ThemeDef } from '@/layouts/themes';
 import { PageView } from '@/render/PageView';
 import { useProject } from '@/state/project';
 import { getOccasion } from '@/templates/occasions';
@@ -41,12 +41,12 @@ export function StyleScreen() {
   const updateProject = useProject((s) => s.updateProject);
   const navigate = useNavigate();
   const occasion = getOccasion(project.occasionId);
-  const ranked = recommendThemes(occasion.themes, project.answers.mood);
+  const [kind, setKind] = useState<AlbumKind>(() => kindOf(project.themeId));
+  const ranked = recommendThemes(occasion.themes, project.answers.mood, kind);
   const map = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
 
   const format = project.format ?? 'portrait';
-  const choose = (id: ThemeId) =>
-    updateProject((p) => ({ ...p, themeId: id, album: p.album ? applyTheme(p.album, id, photos, { motif: chooseMotif(p.occasionId, p.answers.location, p.answers.title), posterText: coverWords(p, photos, true), photoText: coverWords(p, photos, false) }) : undefined }));
+  const choose = (id: ThemeId) => updateProject((p) => switchTheme(p, id, photos));
   const chooseFormat = (f: BookFormat) =>
     updateProject((p) => {
       const next = { ...p, format: f };
@@ -60,6 +60,13 @@ export function StyleScreen() {
       <p className="mt-1 max-w-xl text-sm text-muted">
         Each style changes the paper, typography, frames and page designs — previewed here with your own photos. You can switch any time; your photos and edits are kept.
       </p>
+      <section className="mt-5">
+        <KindToggle value={kind} onChange={setKind} />
+        <p className="mt-2 max-w-xl text-sm text-muted">
+          {ALBUM_KINDS.find((k) => k.id === kind)!.description}
+          {kind !== kindOf(project.themeId) && project.album ? ' Choosing one of these redesigns your pages with the same photos.' : ''}
+        </p>
+      </section>
       <section className="mt-5 max-w-xl">
         <h2 className="mb-2 text-sm font-medium">Book shape</h2>
         <ShapePicker value={format} onChange={chooseFormat} />

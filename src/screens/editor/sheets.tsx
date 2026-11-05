@@ -7,7 +7,7 @@ import { Button, Chip, Sheet } from '@/components/ui';
 import type { AlbumPage, BookFormat, Focal, Photo, ThemeId } from '@/domain/types';
 import { getLayout, layoutsFor } from '@/layouts/layouts';
 import type { LayoutDef } from '@/layouts/schema';
-import { THEMES, getTheme } from '@/layouts/themes';
+import { ALBUM_KINDS, getTheme, kindOf, themesOfKind } from '@/layouts/themes';
 import { PageView } from '@/render/PageView';
 import { coverCrop, focalFor, innerRect } from '@/render/geometry';
 import { usePhotoUrl } from '@/storage/urls';
@@ -217,28 +217,33 @@ export function ThemeSheet({ open, onClose, current, onPick, format, onFormat }:
           <p className="mt-2 text-xs text-muted">Changing the shape redesigns the pages with the same photos. You can undo it.</p>
         </div>
       )}
-      <p className="mb-2 text-sm font-medium">Style</p>
-      <div className="grid gap-2 pb-3">
-        {THEMES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => (onPick(t.id), onClose())}
-            className={`flex items-center gap-4 rounded-2xl p-3 text-left ring-1 transition ${current === t.id ? 'bg-white ring-2 ring-pop' : 'ring-line hover:bg-white'}`}
-          >
-            <span className="flex h-14 w-11 shrink-0 flex-col justify-end overflow-hidden rounded-sm shadow-soft" style={{ background: t.colors.page }}>
-              <span className="h-2" style={{ background: t.colors.accent }} />
-              <span className="h-2" style={{ background: t.colors.accent2 }} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-lg" style={{ fontFamily: `"${t.fonts.title.family}"`, fontStyle: t.fonts.title.style }}>
-                {t.name}
-              </span>
-              <span className="line-clamp-2 block text-xs text-muted">{t.description}</span>
-            </span>
-          </button>
-        ))}
-      </div>
+      {ALBUM_KINDS.map((k) => (
+        <div key={k.id} className="pb-3">
+          <p className="text-sm font-medium">{k.name}</p>
+          {k.id !== kindOf(current) && <p className="text-xs text-muted">Switching to a {k.short.toLowerCase()} redesigns the pages with the same photos. You can undo it.</p>}
+          <div className="mt-2 grid gap-2">
+            {themesOfKind(k.id).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => (onPick(t.id), onClose())}
+                className={`flex items-center gap-4 rounded-2xl p-3 text-left ring-1 transition ${current === t.id ? 'bg-white ring-2 ring-pop' : 'ring-line hover:bg-white'}`}
+              >
+                <span className="flex h-14 w-11 shrink-0 flex-col justify-end overflow-hidden rounded-sm shadow-soft" style={{ background: t.colors.page }}>
+                  <span className="h-2" style={{ background: t.colors.accent }} />
+                  <span className="h-2" style={{ background: t.colors.accent2 }} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-lg" style={{ fontFamily: `"${t.fonts.title.family}"`, fontStyle: t.fonts.title.style }}>
+                    {t.name}
+                  </span>
+                  <span className="line-clamp-2 block text-xs text-muted">{t.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </Sheet>
   );
 }

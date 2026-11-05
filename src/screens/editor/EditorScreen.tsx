@@ -6,14 +6,14 @@ import { Thumb } from '@/components/Thumb';
 import { Button, ButtonLink, Confirm, IconButton, inputClass } from '@/components/ui';
 import type { Album, Photo, Project } from '@/domain/types';
 import {
-  addPage, applyTheme, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setMono, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
+  addPage, changeLayout, clearSlot, movePage, placePhoto, removePage, setFocal, setMono, setText, shufflePage, swapSlots, unusedPhotos, usedPhotoIds,
 } from '@/engine/edit';
 import { pageLabels } from '@/engine/book';
 import { curatePhotos } from '@/engine/curate';
-import { albumDateLabel, coverWords, generateAlbum } from '@/engine/generate';
+import { albumDateLabel, generateAlbum } from '@/engine/generate';
 import { getLayout, isSpread } from '@/layouts/layouts';
-import { chooseMotif } from '@/render/motifs';
-import { getTheme } from '@/layouts/themes';
+import { getTheme, kindOf } from '@/layouts/themes';
+import { switchTheme } from '@/engine/kinds';
 import { PageView } from '@/render/PageView';
 import { takePendingFiles } from '@/state/pendingFiles';
 import { useProject } from '@/state/project';
@@ -357,7 +357,11 @@ export function EditorScreen() {
           onClose={() => setSheet(null)}
           current={project.themeId}
           format={format}
-          onPick={(id) => commit((p) => ({ ...p, themeId: id, album: p.album && applyTheme(p.album, id, photos, { motif: chooseMotif(p.occasionId, p.answers.location, p.answers.title), posterText: coverWords(p, photos, true), photoText: coverWords(p, photos, false) }) }))}
+          onPick={(id) => {
+            const before = project.themeId;
+            commit((p) => switchTheme(p, id, photos));
+            if (kindOf(id) !== kindOf(before)) select(0);
+          }}
           onFormat={(f) => {
             // A new shape needs new page designs: redesign with the same photos (undo brings the old one back).
             commit((p) => {

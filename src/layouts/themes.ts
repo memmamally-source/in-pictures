@@ -18,6 +18,8 @@ export type BackgroundKind = 'plain' | 'dots' | 'grid' | 'lines' | 'kraft' | 'li
 
 export interface ThemeDef {
   id: ThemeId;
+  /** Which product it belongs to: professional photo album or scrapbook. */
+  kind: AlbumKind;
   name: string;
   description: string;
   colors: {
@@ -85,6 +87,7 @@ const SCRIPT = 'Great Vibes';
 export const THEMES: ThemeDef[] = [
   {
     id: 'gallery',
+    kind: 'photobook',
     name: 'Gallery',
     description: 'A professional photo book: edge-to-edge photos, hairline gaps, panoramic spreads and quiet type. The photos do the talking.',
     colors: { page: '#FFFFFF', chapterPage: '#FFFFFF', ink: '#1A1A1A', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#1A1A1A', mat: '#FFFFFF', pattern: '#EEEEEE' },
@@ -111,6 +114,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'graphic',
+    kind: 'photobook',
     name: 'Bold Graphic',
     description: 'A design-shop book: a colour-block cover with a giant title and an illustration, then clean, confident photo pages.',
     colors: { page: '#FFFFFF', chapterPage: '#F7D046', ink: '#1E1B18', muted: '#55504A', accent: '#C2412D', accent2: '#1F6F6B', mat: '#FFFFFF', pattern: '#EEEEEE' },
@@ -138,6 +142,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'brag',
+    kind: 'photobook',
     name: 'Brag Book',
     description: 'A little book of big photos: every page one photo, edge to edge, like a pocket brag book. Nothing but the pictures.',
     colors: { page: '#FFFFFF', chapterPage: '#111111', ink: '#141414', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#141414', mat: '#FFFFFF', pattern: '#EEEEEE' },
@@ -166,6 +171,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'minimal',
+    kind: 'photobook',
     name: 'Minimal Editorial',
     description: 'Magazine pages: generous white space, refined serif titles and large, uncluttered photographs.',
     colors: { page: '#FFFFFF', chapterPage: '#141414', ink: '#141414', muted: '#5E5E5E', accent: '#FF4F2E', accent2: '#141414', mat: '#FFFFFF', pattern: '#ECECEC' },
@@ -189,6 +195,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'scrapbook',
+    kind: 'scrapbook',
     name: 'Warm Scrapbook',
     description: 'Kraft paper, taped prints at playful angles, handwritten captions and little doodles.',
     colors: { page: '#E2C8A4', chapterPage: '#F6D9C2', ink: '#3A2416', muted: '#6A4A33', accent: '#E8604C', accent2: '#3FA37C', mat: '#FFFDF8', pattern: '#C9A97F' },
@@ -217,6 +224,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'polaroid',
+    kind: 'scrapbook',
     name: 'Playful Polaroid',
     description: 'Instant-photo frames, photo-booth strips and cheerful pastel pages with confetti.',
     colors: { page: '#FFF1E6', chapterPage: '#CDEFFF', ink: '#2B2340', muted: '#5A5070', accent: '#FF5C7A', accent2: '#16B3A3', mat: '#FFFFFF', pattern: '#FFC24B' },
@@ -239,6 +247,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'romantic',
+    kind: 'scrapbook',
     name: 'Romantic',
     description: 'Blush tones, soft rounded frames and arches, delicate botanical sprigs and italic serif type.',
     colors: { page: '#FDE8EC', chapterPage: '#9E2A4B', ink: '#4A1E2C', muted: '#7A4656', accent: '#D6456B', accent2: '#6E9E6A', mat: '#FFF8F9', pattern: '#F5C2CE' },
@@ -262,6 +271,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'travel',
+    kind: 'scrapbook',
     name: 'Travel Journal',
     description: 'Field-notebook grid paper, postage-stamp frames, postmarks, typewriter dates and airmail stripes.',
     colors: { page: '#F7ECD2', chapterPage: '#1F3A64', ink: '#1B2A41', muted: '#4C5A70', accent: '#D7263D', accent2: '#1F4E8C', mat: '#FFFDF6', pattern: '#E2D2AC' },
@@ -291,6 +301,7 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'heritage',
+    kind: 'scrapbook',
     name: 'Classic Heritage',
     description: 'A traditional album: ivory card, photo corners, fine double borders and timeless serif titles.',
     colors: { page: '#F4EEDC', chapterPage: '#1F4A3A', ink: '#2A2018', muted: '#62554A', accent: '#8E1F3A', accent2: '#1F4A3A', mat: '#FBF8EF', pattern: '#E2D6BA' },
@@ -324,10 +335,36 @@ export function isDarkPage(theme: ThemeDef, kind: 'chapter' | 'other'): boolean 
 }
 
 /** Ranks themes for an occasion's recommendation list and the user's mood. */
-export function recommendThemes(occasionThemes: ThemeId[], mood: Mood): ThemeId[] {
+/** Styles best suited to an occasion and mood, best first; only one kind of album when given. */
+export function recommendThemes(occasionThemes: ThemeId[], mood: Mood, kind?: AlbumKind): ThemeId[] {
   const score = (t: ThemeDef) => {
     const i = occasionThemes.indexOf(t.id);
     return (i === -1 ? 0 : 3 - i) * 2 + (t.moods.includes(mood) ? 3 : 0);
   };
-  return [...THEMES].sort((a, b) => score(b) - score(a)).map((t) => t.id);
+  return THEMES.filter((t) => !kind || t.kind === kind)
+    .sort((a, b) => score(b) - score(a))
+    .map((t) => t.id);
 }
+
+export type AlbumKind = 'photobook' | 'scrapbook';
+
+export const ALBUM_KINDS: { id: AlbumKind; name: string; short: string; description: string }[] = [
+  {
+    id: 'photobook',
+    name: 'Professional photo album',
+    short: 'Photo album',
+    description: 'Clean, print-ready photo-book pages: edge-to-edge photos, panoramic spreads and gallery covers. For weddings, trips and anything worth framing.',
+  },
+  {
+    id: 'scrapbook',
+    name: 'Scrapbook',
+    short: 'Scrapbook',
+    description: 'Playful pages with paper, tape, polaroid frames and handwritten captions. For family days, birthdays and everyday memories.',
+  },
+];
+
+export const kindOf = (themeId: ThemeId): AlbumKind => getTheme(themeId).kind;
+const BY_KIND: Record<AlbumKind, ThemeDef[]> = { photobook: THEMES.filter((t) => t.kind === 'photobook'), scrapbook: THEMES.filter((t) => t.kind === 'scrapbook') };
+/** The styles of one kind of album (the same array each call). */
+export const themesOfKind = (kind: AlbumKind): ThemeDef[] => BY_KIND[kind];
+export const isAlbumKind = (v: unknown): v is AlbumKind => v === 'photobook' || v === 'scrapbook';

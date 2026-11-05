@@ -2,7 +2,8 @@ import { create } from 'zustand';
 
 import type { Answers, Project } from '@/domain/types';
 import { createId } from '@/lib/id';
-import { getTheme, recommendThemes } from '@/layouts/themes';
+import { suggestedFormat } from '@/engine/kinds';
+import { recommendThemes, type AlbumKind } from '@/layouts/themes';
 import { repo } from '@/services/repository';
 import { getOccasion } from '@/templates/occasions';
 import { buildPlan, chaptersFor } from '@/templates/planner';
@@ -11,7 +12,7 @@ interface LibraryState {
   projects: Project[];
   loaded: boolean;
   refresh: () => Promise<void>;
-  create: (occasionId: string, answers: Answers, options?: { quick?: boolean }) => Promise<Project>;
+  create: (occasionId: string, answers: Answers, options?: { quick?: boolean; kind?: AlbumKind }) => Promise<Project>;
   rename: (id: string, title: string) => Promise<void>;
   duplicate: (id: string) => Promise<Project | undefined>;
   remove: (id: string) => Promise<void>;
@@ -26,7 +27,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   async create(occasionId, answers, options = {}) {
     const occasion = getOccasion(occasionId);
     const now = Date.now();
-    const themeId = recommendThemes(occasion.themes, answers.mood)[0];
+    const themeId = recommendThemes(occasion.themes, answers.mood, options.kind)[0];
+    const format = suggestedFormat(themeId, occasionId);
     const project: Project = {
       id: createId('album'),
       schemaVersion: 1,
@@ -35,7 +37,7 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
       plan: buildPlan(occasion, answers),
       chapters: chaptersFor(occasion),
       themeId,
-      format: occasion.defaultFormat ?? getTheme(themeId).defaultFormat ?? 'portrait',
+      format,
       step: options.quick ? 'album' : answers.mode === 'plan' ? 'plan' : 'photos',
       quick: options.quick || undefined,
       createdAt: now,
