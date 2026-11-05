@@ -17,9 +17,9 @@ Occasions are assembled from parts instead of written out as fixed lists:
 
 | Part | Where | Role |
 | --- | --- | --- |
-| Shot library | `shots.ts` | 53 reusable prompts (departure, landmark, couple portrait, cake, candles, group photo…) with category, default chapter, priority and an optional condition |
+| Shot library | `shots.ts`, `moreShots.ts` | 96 reusable prompts (departure, landmark, couple portrait, cake, family portrait, friends together…) with category, default chapter, priority and an optional condition. With occasion-only ideas there are 445 distinct ideas; each occasion has 29–61 before conditions and album length filter them |
 | Occasion | `occasions.ts` | 20 entries: chapters (story order, one marked `ending`), the questions to ask, shot references (by id, optionally overridden) plus occasion-only shots, suggested themes and a title template |
-| Conditions | `Condition` | keep a shot only for certain groups (`groups`, `notGroups`), with/without children, trip length (`minDays`), a named honoree, an occasion answer (`extra`, `extraEquals`), group size |
+| Conditions | `Condition` | keep a shot only for certain groups (`groups` = any selected, `allGroups` = all selected, e.g. family *and* friends; `notGroups` = drop when every selected group is listed), with/without children, trip length (`minDays`), a named honoree, an occasion answer (`extra`, `extraEquals`), group size |
 | Target rules | `TargetRule` | counts that scale: `base + perDay × (days − 1) + perPerson × (people − 1)`, capped |
 | Per-day shots | `perDay: true` | one prompt per day (“Day 2 (Tue 2 Jun): highlight of the day”) up to 7 days, then one prompt with a target of N |
 | Tokens | `{location}`, `{honoree}`, `{names}`, `{year}`, `{extra:id}` | filled only from the user’s answers; when an answer is missing the shot’s `fallbackTitle` is used — nothing is invented |
@@ -29,7 +29,11 @@ Occasions are assembled from parts instead of written out as fixed lists:
 
 The combinations come from 20 occasions × 5 group types × children yes/no × trip length × occasion-specific answers × 3 lengths × 7 moods, on the planning side, and 6 themes × 51 layouts on the design side. None of these are stored as separate templates.
 
-**Add an occasion:** append an `OccasionDef` to `OCCASIONS`. Reference library shots by id, override fields inline (`{ id: 'toast', chapter: 'table' }`), add new shots inline with all fields. Tests check every shot lands in one of the occasion’s chapters, every occasion has one ending chapter, and every group produces a usable plan.
+**Who's in the photos** is multi-select (`Answers.groups`): "Just me" stands alone, the others combine. Albums saved with the older single `group` are upgraded on load (`normaliseAnswers`).
+
+**Chapters:** library shots name a generic chapter ("together", "end"…); `fitChapter` maps it to the occasion's closest chapter, so shared ideas need no per-occasion overrides.
+
+**Add an occasion:** append an `OccasionDef` to `BASE` in `occasions.ts` (extra ideas can go in `MORE_FOR` in `moreShots.ts`). Reference library shots by id, override fields inline (`{ id: 'toast', chapter: 'table' }`), add new shots inline with all fields. Tests check every shot lands in one of the occasion’s chapters, every occasion has one ending chapter, and every group produces a usable plan.
 
 ## 2. Layout schema
 

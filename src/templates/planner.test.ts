@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { Answers } from '@/domain/types';
 
 import { getOccasion, OCCASIONS, searchOccasions } from './occasions';
-import { buildPlan, computeTarget, fillTokens, joinNames, mergePlan, planProgress, resolveShots, suggestTitle, tripDays } from './planner';
+import { buildPlan, computeTarget, defaultParticipants, fillTokens, joinNames, mergePlan, normaliseAnswers, planProgress, resolveShots, suggestTitle, toggleGroup, tripDays } from './planner';
 
 const answers = (over: Partial<Answers> = {}): Answers => ({
   title: '',
-  group: 'couple',
+  groups: ['couple'],
   participants: 2,
   names: [],
   children: false,
@@ -39,7 +39,7 @@ describe('occasion catalogue', () => {
   it('produces a non-empty plan for every occasion and group', () => {
     for (const o of OCCASIONS) {
       for (const group of o.questions.groupOptions ?? (['solo', 'couple', 'family', 'friends', 'group'] as const)) {
-        const plan = buildPlan(o, answers({ group, participants: group === 'solo' ? 1 : 4, length: 'short' }));
+        const plan = buildPlan(o, answers({ groups: [group], participants: group === 'solo' ? 1 : 4, length: 'short' }));
         expect(plan.length, `${o.id}/${group}`).toBeGreaterThan(2);
         expect(new Set(plan.map((p) => p.id)).size).toBe(plan.length);
       }
@@ -67,14 +67,14 @@ describe('personalised plans', () => {
   });
 
   it('a solo trip never suggests couple photos', () => {
-    const ids = shotIds('international-travel', answers({ group: 'solo', participants: 1, location: 'Japan' }));
+    const ids = shotIds('international-travel', answers({ groups: ['solo'], participants: 1, location: 'Japan' }));
     expect(ids).not.toContain('couple-laughing');
     expect(ids).not.toContain('couple-portrait');
     expect(ids).toContain('solo-portrait');
   });
 
   it('family birthday centres the birthday person and uses their name', () => {
-    const plan = buildPlan(getOccasion('birthday'), answers({ group: 'family', participants: 5, honoree: 'Maya', children: true, extras: { party: true } }));
+    const plan = buildPlan(getOccasion('birthday'), answers({ groups: ['family'], participants: 5, honoree: 'Maya', children: true, extras: { party: true } }));
     const t = plan.map((p) => p.title);
     expect(t).toContain('Maya blowing out the candles');
     expect(t).toContain('A portrait of Maya');
@@ -83,14 +83,14 @@ describe('personalised plans', () => {
   });
 
   it('without a name, falls back to neutral wording instead of inventing one', () => {
-    const t = titles('birthday', answers({ group: 'family', extras: { party: false } }));
+    const t = titles('birthday', answers({ groups: ['family'], extras: { party: false } }));
     expect(t).toContain('Blowing out the candles');
     expect(t.some((x) => x.includes('{'))).toBe(false);
     expect(t).not.toContain('Party games');
   });
 
   it('graduation focuses on the graduate, attire, ceremony and family — no travel shots', () => {
-    const plan = buildPlan(getOccasion('graduation'), answers({ group: 'family', participants: 4, honoree: 'Daniel', extras: { celebration: true } }));
+    const plan = buildPlan(getOccasion('graduation'), answers({ groups: ['family'], participants: 4, honoree: 'Daniel', extras: { celebration: true } }));
     const t = plan.map((p) => p.title);
     expect(t).toContain('Daniel in cap and gown');
     expect(t).toContain('Crossing the stage');
@@ -100,8 +100,8 @@ describe('personalised plans', () => {
   });
 
   it('adds children prompts only when children take part', () => {
-    expect(shotIds('family-gathering', answers({ group: 'family', children: true }))).toContain('kids-candid');
-    expect(shotIds('family-gathering', answers({ group: 'family', children: false }))).not.toContain('kids-candid');
+    expect(shotIds('family-gathering', answers({ groups: ['family'], children: true }))).toContain('kids-candid');
+    expect(shotIds('family-gathering', answers({ groups: ['family'], children: false }))).not.toContain('kids-candid');
   });
 
   it('scales targets with trip length and repeats per-day shots', () => {
@@ -117,14 +117,14 @@ describe('personalised plans', () => {
   });
 
   it('album length controls how many prompts appear', () => {
-    const n = (length: Answers['length']) => buildPlan(getOccasion('wedding'), answers({ group: 'group', length, extras: { role: 'couple' } })).length;
+    const n = (length: Answers['length']) => buildPlan(getOccasion('wedding'), answers({ groups: ['group'], length, extras: { role: 'couple' } })).length;
     expect(n('short')).toBeLessThan(n('standard'));
     expect(n('standard')).toBeLessThan(n('long'));
   });
 
   it('occasion-specific choices change the plan (wedding guest vs couple)', () => {
-    const guest = shotIds('wedding', answers({ group: 'friends', extras: { role: 'guest' } }));
-    const couple = shotIds('wedding', answers({ group: 'friends', extras: { role: 'couple' } }));
+    const guest = shotIds('wedding', answers({ groups: ['friends'], extras: { role: 'guest' } }));
+    const couple = shotIds('wedding', answers({ groups: ['friends'], extras: { role: 'couple' } }));
     expect(guest).toContain('guest-with-couple');
     expect(guest).not.toContain('couple-portraits');
     expect(couple).toContain('couple-portraits');
@@ -133,6 +133,44 @@ describe('personalised plans', () => {
   it('is deterministic', () => {
     const a = answers({ location: 'Lisbon', days: 3 });
     expect(buildPlan(getOccasion('road-trip'), a)).toEqual(buildPlan(getOccasion('road-trip'), a));
+  });
+});
+
+describe('more than one group', () => {
+  it('a birthday with family and friends gets ideas for both, and for them together', () => {
+    const both = shotIds('birthday', answers({ groups: ['family', 'friends'], participants: 12, honoree: 'Maya', extras: { party: true } }));
+    expect(both).toEqual(expect.arrayContaining(['honoree-family', 'honoree-friends', 'mixed-groups', 'family-portrait', 'friends-together']));
+    const familyOnly = shotIds('birthday', answers({ groups: ['family'], honoree: 'Maya', extras: { party: true } }));
+    expect(familyOnly).toContain('honoree-family');
+    expect(familyOnly).not.toContain('honoree-friends');
+    expect(familyOnly).not.toContain('mixed-groups');
+  });
+
+  it('picking groups: "Just me" stands alone, others combine, one always stays selected', () => {
+    expect(toggleGroup(['family'], 'friends')).toEqual(['family', 'friends']);
+    expect(toggleGroup(['family', 'friends'], 'family')).toEqual(['friends']);
+    expect(toggleGroup(['friends'], 'friends')).toEqual(['friends']);
+    expect(toggleGroup(['family', 'friends'], 'solo')).toEqual(['solo']);
+    expect(toggleGroup(['solo'], 'couple')).toEqual(['couple']);
+    expect(defaultParticipants(['family', 'friends'])).toBe(8);
+  });
+
+  it('upgrades albums saved with a single group', () => {
+    const old = { ...answers(), groups: undefined, group: 'friends' } as unknown as Parameters<typeof normaliseAnswers>[0];
+    expect(normaliseAnswers(old).groups).toEqual(['friends']);
+  });
+});
+
+describe('idea counts', () => {
+  it('every occasion offers plenty of ideas, and short albums still get a useful core', () => {
+    for (const o of OCCASIONS) {
+      const extras = Object.fromEntries((o.questions.extras ?? []).map((e) => [e.id, e.type === 'text' ? '' : e.default]));
+      const groups = [o.questions.groupDefault];
+      const a = (length: Answers['length']) => answers({ groups, participants: 4, length, extras, location: 'X', honoree: 'Sam', days: 3 });
+      expect(buildPlan(o, a('standard')).length, `${o.id} standard`).toBeGreaterThanOrEqual(20);
+      expect(buildPlan(o, a('long')).length, `${o.id} long`).toBeGreaterThanOrEqual(24);
+      expect(buildPlan(o, a('short')).length, `${o.id} short`).toBeGreaterThanOrEqual(6);
+    }
   });
 });
 
@@ -177,7 +215,7 @@ describe('helpers', () => {
   });
 
   it('measures progress without requiring completion', () => {
-    const plan = buildPlan(getOccasion('pets'), answers({ group: 'family', honoree: 'Biscuit', extras: { 'pet-kind': 'dog' } }));
+    const plan = buildPlan(getOccasion('pets'), answers({ groups: ['family'], honoree: 'Biscuit', extras: { 'pet-kind': 'dog' } }));
     plan[1] = { ...plan[1], skipped: true };
     const p = planProgress(plan, { [plan[0].id]: plan[0].target });
     expect(p).toMatchObject({ complete: 1, skipped: 1, total: plan.length - 1 });

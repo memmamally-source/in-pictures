@@ -17,7 +17,11 @@ import type { AlbumLength, GroupType, Mood, ShotCategory, ThemeId } from '@/doma
  */
 
 export interface Condition {
+  /** At least one of these groups is selected. */
   groups?: GroupType[];
+  /** All of these groups are selected (e.g. family and friends together). */
+  allGroups?: GroupType[];
+  /** Excluded when every selected group is in this list. */
   notGroups?: GroupType[];
   children?: boolean;
   minDays?: number;

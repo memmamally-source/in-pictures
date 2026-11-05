@@ -1,3 +1,4 @@
+import { MORE_FOR } from './moreShots';
 import type { OccasionDef, OccasionQuestions } from './schema';
 
 /**
@@ -41,7 +42,7 @@ const CELEBRATION_CHAPTERS = [
   { id: 'end', title: 'Until next time', ending: true },
 ];
 
-export const OCCASIONS: OccasionDef[] = [
+const BASE: OccasionDef[] = [
   {
     id: 'international-travel',
     name: 'International travel',
@@ -830,6 +831,8 @@ export const OCCASIONS: OccasionDef[] = [
     fallbackTitle: 'My album',
   },
 ];
+
+export const OCCASIONS: OccasionDef[] = BASE.map((o) => ({ ...o, shots: [...o.shots, ...(MORE_FOR[o.id] ?? [])] }));
 
 export const OCCASION_BY_ID: Record<string, OccasionDef> = Object.fromEntries(OCCASIONS.map((o) => [o.id, o]));
 

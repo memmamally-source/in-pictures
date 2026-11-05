@@ -11,10 +11,11 @@
 | Area | Status |
 | --- | --- |
 | Full journey (occasion → questions → checklist → photos → style → album → edit → save → PDF) | ✅ Works in headless Chromium (desktop + emulated iPhone 13) |
-| 20 occasions, 53 library shots, 51 layouts, 6 styles | ✅ |
+| 20 occasions, 445 photo ideas (96 shared), 51 layouts, 6 styles | ✅ |
 | Local storage, autosave, storage warnings | ✅ IndexedDB `in-pictures` |
 | PDF export 150 / 300 dpi with resolution checks | ✅ Not print-shop ready (no bleed/CMYK) |
 | Bright lifestyle palette | ✅ Owner feedback round 1 |
+| Multi-select "Who's in the photos?" + many more ideas | ✅ Owner feedback round 2: standard albums now 16–36 ideas (was 9–23), long 22–52; family + friends gets ideas for both and together |
 | Hosting | GitHub Pages workflow ready (`deploy.yml`); needs Settings → Pages → GitHub Actions and a public repo (or paid plan) |
 | Physical phone testing | ❌ Not done |
 

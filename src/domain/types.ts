@@ -22,7 +22,8 @@ export interface Answers {
   endDate?: string; // yyyy-mm-dd (range occasions)
   /** Used when no dates are given for a multi-day occasion. */
   days?: number;
-  group: GroupType;
+  /** Who's in the photos: one or more (e.g. family and friends). */
+  groups: GroupType[];
   participants: number;
   names: string[];
   /** The person/pet/couple the occasion is about, if the user named them. */

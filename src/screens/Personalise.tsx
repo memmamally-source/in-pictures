@@ -8,7 +8,7 @@ import { useLibrary } from '@/state/library';
 import { useProject } from '@/state/project';
 import { getOccasion } from '@/templates/occasions';
 import type { OccasionDef } from '@/templates/schema';
-import { buildPlan, defaultParticipants, GROUP_LABELS, mergePlan, suggestTitle } from '@/templates/planner';
+import { buildPlan, defaultParticipants, GROUP_LABELS, mergePlan, suggestTitle, toggleGroup } from '@/templates/planner';
 
 const MOODS: { id: Mood; label: string }[] = [
   { id: 'joyful', label: 'Joyful' },
@@ -27,13 +27,13 @@ const LENGTHS: { id: AlbumLength; label: string; help: string }[] = [
 ];
 
 function defaults(o: OccasionDef, have: boolean): Answers {
-  const group = o.questions.groupDefault;
+  const groups: GroupType[] = [o.questions.groupDefault];
   const extras: Answers['extras'] = {};
   for (const e of o.questions.extras ?? []) if (e.type !== 'text') extras[e.id] = e.default;
   return {
     title: '',
-    group,
-    participants: defaultParticipants(group),
+    groups,
+    participants: defaultParticipants(groups),
     names: [],
     children: false,
     mood: o.defaultMood,
@@ -63,8 +63,13 @@ export function Personalise({ edit }: { edit?: boolean }) {
   const setExtra = (id: string, v: string | boolean) => setA((prev) => ({ ...prev, extras: { ...prev.extras, [id]: v } }));
   const suggested = suggestTitle(occasion, a);
   const title = titleTouched ? a.title : suggested;
-  const groups: GroupType[] = q.groupOptions ?? ['solo', 'couple', 'family', 'friends', 'group'];
-  const groupish = a.group !== 'solo' && a.group !== 'couple';
+  const groupChoices: GroupType[] = q.groupOptions ?? ['solo', 'couple', 'family', 'friends', 'group'];
+  const groupish = a.groups.some((g) => g === 'family' || g === 'friends' || g === 'group');
+  const pickGroup = (g: GroupType) => {
+    const next = toggleGroup(a.groups, g);
+    const big = next.some((x) => x === 'family' || x === 'friends' || x === 'group');
+    set({ groups: next, participants: defaultParticipants(next), children: big ? a.children : false });
+  };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -135,11 +140,11 @@ export function Personalise({ edit }: { edit?: boolean }) {
             </div>
           )}
 
-          {groups.length > 1 && (
-            <Field label="Who’s in the photos?">
+          {groupChoices.length > 1 && (
+            <Field label="Who’s in the photos?" hint="Pick as many as you like — e.g. Family and Friends.">
               <div className="flex flex-wrap gap-2">
-                {groups.map((g) => (
-                  <Chip key={g} selected={a.group === g} onClick={() => set({ group: g, participants: defaultParticipants(g), children: g === 'solo' || g === 'couple' ? false : a.children })}>
+                {groupChoices.map((g) => (
+                  <Chip key={g} selected={a.groups.includes(g)} onClick={() => pickGroup(g)}>
                     {GROUP_LABELS[g]}
                   </Chip>
                 ))}
@@ -153,9 +158,9 @@ export function Personalise({ edit }: { edit?: boolean }) {
             </Field>
           )}
 
-          {a.group !== 'solo' && (
+          {!a.groups.includes('solo') && (
             <Field label="Names (optional)" htmlFor="names" hint="Separate with commas. Shown on the closing page; never shared.">
-              <input id="names" className={inputClass} placeholder={a.group === 'couple' ? 'e.g. Anna, Ben' : 'e.g. Mum, Dad, Leo, Ava'} value={namesText} onChange={(e) => setNamesText(e.target.value)} autoComplete="off" />
+              <input id="names" className={inputClass} placeholder={a.groups.length === 1 && a.groups[0] === 'couple' ? 'e.g. Anna, Ben' : 'e.g. Mum, Dad, Leo, Ava'} value={namesText} onChange={(e) => setNamesText(e.target.value)} autoComplete="off" />
             </Field>
           )}
 

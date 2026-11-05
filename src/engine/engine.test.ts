@@ -14,7 +14,7 @@ import { addPage, applyTheme, changeLayout, movePage, placePhoto, removePage, sh
 import { buildSections, formatDateRange, generateAlbum, paginate } from './generate';
 
 const answers = (over: Partial<Answers> = {}): Answers => ({
-  title: 'Honeymoon in Greece', location: 'Greece', group: 'couple', participants: 2, names: ['Anna', 'Ben'], children: false,
+  title: 'Honeymoon in Greece', location: 'Greece', groups: ['couple'], participants: 2, names: ['Anna', 'Ben'], children: false,
   mood: 'romantic', length: 'standard', mode: 'have-photos', extras: {}, ...over,
 });
 

@@ -1,5 +1,9 @@
 import type { Photo, Project } from '@/domain/types';
 import { blobKey, db, type Variant } from '@/storage/db';
+import { normaliseAnswers } from '@/templates/planner';
+
+/** Brings projects saved by older versions up to the current shape. */
+const upgrade = (p: Project): Project => ({ ...p, answers: normaliseAnswers(p.answers) });
 
 /**
  * Storage boundary. Screens and stores talk to `ProjectRepository`, never to
@@ -33,10 +37,11 @@ const VARIANTS: Variant[] = ['thumb', 'display', 'full'];
 export const localRepository: ProjectRepository = {
   async listProjects() {
     const all = await (await db()).getAll('projects');
-    return all.sort((a, b) => b.updatedAt - a.updatedAt);
+    return all.map(upgrade).sort((a, b) => b.updatedAt - a.updatedAt);
   },
   async getProject(id) {
-    return (await db()).get('projects', id);
+    const p = await (await db()).get('projects', id);
+    return p && upgrade(p);
   },
   async saveProject(project) {
     await (await db()).put('projects', project);

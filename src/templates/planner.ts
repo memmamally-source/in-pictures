@@ -54,8 +54,10 @@ export function fillTokens(template: string, a: Answers): string | null {
 
 export function matches(when: Condition | undefined, a: Answers, days: number): boolean {
   if (!when) return true;
-  if (when.groups && !when.groups.includes(a.group)) return false;
-  if (when.notGroups && when.notGroups.includes(a.group)) return false;
+  const gs = a.groups;
+  if (when.groups && !when.groups.some((g) => gs.includes(g))) return false;
+  if (when.allGroups && !when.allGroups.every((g) => gs.includes(g))) return false;
+  if (when.notGroups && gs.every((g) => when.notGroups!.includes(g))) return false;
   if (when.children !== undefined && when.children !== a.children) return false;
   if (when.minDays !== undefined && days < when.minDays) return false;
   if (when.maxDays !== undefined && days > when.maxDays) return false;
@@ -78,6 +80,32 @@ export function computeTarget(t: number | TargetRule | undefined, a: Answers, da
 
 const PRIORITY_FOR_LENGTH = { short: 1, standard: 2, long: 3 } as const;
 
+/**
+ * Library shots name a generic chapter ("together", "end"…). When an occasion
+ * calls its chapters something else, the shot goes to the closest one, so
+ * shared ideas can be reused without restating the chapter every time.
+ */
+const CHAPTER_ALIASES: Record<string, string[]> = {
+  'setting-off': ['setting-off', 'arrival', 'arrivals', 'preparing', 'getting-ready', 'build-up', 'beginning', 'first-day', 'hello'],
+  arrival: ['arrival', 'arrivals', 'setting-off', 'first-day', 'hello', 'beginning', 'proposal'],
+  exploring: ['exploring', 'adventures', 'out', 'rides', 'music', 'action', 'play', 'middle', 'the-day', 'celebration'],
+  flavours: ['flavours', 'table', 'celebration', 'everyday', 'middle'],
+  together: ['together', 'people', 'friends', 'us', 'middle', 'celebration'],
+  people: ['people', 'together', 'friends', 'middle', 'celebration'],
+  'getting-ready': ['getting-ready', 'preparing', 'build-up', 'arrivals', 'arrival', 'first-day', 'beginning', 'proposal'],
+  celebration: ['celebration', 'the-day', 'table', 'ceremony', 'middle', 'together', 'action'],
+  everyday: ['everyday', 'together', 'middle', 'out'],
+  end: ['end', 'last-day'],
+  'last-day': ['last-day', 'end'],
+};
+
+export function fitChapter(occasion: OccasionDef, chapter: string): string {
+  const ids = occasion.chapters.map((c) => c.id);
+  if (ids.includes(chapter)) return chapter;
+  const alias = (CHAPTER_ALIASES[chapter] ?? []).find((c) => ids.includes(c));
+  return alias ?? ids[Math.floor(ids.length / 2)];
+}
+
 /** Resolves an occasion's shot references against the library; later refs override earlier ones. */
 export function resolveShots(occasion: OccasionDef): ShotDef[] {
   const byId = new Map<string, ShotDef>();
@@ -89,6 +117,7 @@ export function resolveShots(occasion: OccasionDef): ShotDef[] {
     if (!merged.title || !merged.category || !merged.chapter) {
       throw new Error(`Occasion ${occasion.id}: shot "${id}" is not in the library and is missing fields`);
     }
+    merged.chapter = fitChapter(occasion, merged.chapter);
     byId.delete(id); // keep the position of the last reference
     byId.set(id, merged);
   }
@@ -160,8 +189,25 @@ export const GROUP_LABELS: Record<GroupType, string> = {
   group: 'A big group',
 };
 
-export function defaultParticipants(group: GroupType): number {
-  return { solo: 1, couple: 2, family: 4, friends: 4, group: 10 }[group];
+const DEFAULT_PEOPLE: Record<GroupType, number> = { solo: 1, couple: 2, family: 4, friends: 4, group: 10 };
+
+export function defaultParticipants(groups: GroupType[]): number {
+  return Math.max(1, groups.reduce((n, g) => n + DEFAULT_PEOPLE[g], 0));
+}
+
+/** Answers saved before multi-select had a single `group`. */
+export function normaliseAnswers(a: Answers & { group?: GroupType }): Answers {
+  if (Array.isArray(a.groups) && a.groups.length) return a;
+  const { group, ...rest } = a;
+  return { ...rest, groups: [group ?? 'solo'] };
+}
+
+/** "Just me" can't be combined; the others can (e.g. family + friends). */
+export function toggleGroup(current: GroupType[], g: GroupType): GroupType[] {
+  if (g === 'solo') return ['solo'];
+  const without = current.filter((x) => x !== 'solo');
+  if (without.includes(g)) return without.length > 1 ? without.filter((x) => x !== g) : without;
+  return [...without, g];
 }
 
 export interface PlanProgress {
