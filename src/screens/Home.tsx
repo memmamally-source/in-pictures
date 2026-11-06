@@ -253,6 +253,15 @@ function AlbumCard({ project }: { project: Project }) {
           <div className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-black/20 to-transparent" />
         </div>
       </Link>
+      <button
+        type="button"
+        onClick={() => setDeleting(true)}
+        className="absolute top-2 right-2 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-ink shadow-soft ring-1 ring-black/5 backdrop-blur transition hover:bg-white hover:text-[#9b2c2c]"
+        aria-label={`Delete ${project.answers.title}`}
+        title="Delete album"
+      >
+        <Icon name="trash" size={18} />
+      </button>
       <div className="mt-2 flex items-start justify-between gap-1">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{getTheme(project.themeId).kind === 'photobook' ? 'Photo album' : 'Scrapbook'} · {project.quick ? 'Quick' : occasion.name}</p>
@@ -260,7 +269,13 @@ function AlbumCard({ project }: { project: Project }) {
             {date || 'No date'} · {project.album ? `${project.album.pages.length} pages` : 'Draft'}
           </p>
         </div>
-        <button type="button" onClick={() => setMenu(true)} className="-mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-cream" aria-label={`Options for ${project.answers.title}`}>
+        <button
+          type="button"
+          onClick={() => setMenu(true)}
+          className="-mr-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-ink ring-1 ring-line hover:bg-cream"
+          aria-label={`Options for ${project.answers.title}`}
+          title="Rename, duplicate, back up or delete"
+        >
           <Icon name="more" />
         </button>
       </div>

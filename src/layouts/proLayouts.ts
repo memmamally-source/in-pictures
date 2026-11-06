@@ -14,7 +14,7 @@ import { canvasSize, type DecorItem, type LayoutDef, type PhotoFrame, type Rect,
 
 type Split = { dir: 'row' | 'col'; weights: number[]; parts?: (Split | null)[] };
 
-const GAP = 1.1; // hairline gutter between photos
+const GAP = 0.6; // hairline gutter between photos (about 1 mm on an 8 in page)
 const MARGIN = 6; // white-border family
 
 function split(r: Rect, s: Split, gap: number): Rect[] {
@@ -214,9 +214,13 @@ function build(f: BookFormat): LayoutDef[] {
     ],
   });
   out.push({
-    ...base, id: `pro-${f}-closing-photo`, name: 'Closing photo', kind: 'closing',
-    photos: [{ x: 14, y: 12, w: 72, h: H - 40, hero: true }],
-    texts: [textBox('title', 'title', { x: 10, y: H - 25, w: 80, h: 9 }, 5, { maxLines: 1 }), textBox('date', 'date', { x: 10, y: H - 15, w: 80, h: 5 }, 2.6)],
+    ...base, id: `pro-${f}-closing-photo`, name: 'Closing photo', kind: 'closing', bleed: true,
+    photos: [{ x: 0, y: 0, w: 100, h: H, frame: 'none', shape: 'rect', hero: true }],
+    decor: [{ kind: 'shade-bottom', x: 0, y: H * 0.6, w: 100, h: H * 0.4 }],
+    texts: [
+      textBox('title', 'title', { x: 8, y: H - 22, w: 84, h: 9 }, 5, { maxLines: 1, color: 'onPhoto' }),
+      textBox('date', 'date', { x: 8, y: H - 12, w: 84, h: 5 }, 2.4, { color: 'onPhoto' }),
+    ],
   });
 
   return out;

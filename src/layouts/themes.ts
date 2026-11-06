@@ -61,6 +61,8 @@ export interface ThemeDef {
   defaultFormat?: 'portrait' | 'landscape' | 'square' | 'pocket';
   /** Brag book: every page is one photo, edge to edge, and there are no chapter pages. */
   singlePhotoPages?: boolean;
+  /** Photo-book look: photo pages and covers run edge to edge (no white-border pages). */
+  borderless?: boolean;
 }
 
 /** Which font each text role uses. */
@@ -88,6 +90,7 @@ export const THEMES: ThemeDef[] = [
   {
     id: 'gallery',
     kind: 'photobook',
+    borderless: true,
     name: 'Gallery',
     description: 'A professional photo book: edge-to-edge photos, hairline gaps, panoramic spreads and quiet type. The photos do the talking.',
     colors: { page: '#FFFFFF', chapterPage: '#FFFFFF', ink: '#1A1A1A', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#1A1A1A', mat: '#FFFFFF', pattern: '#EEEEEE' },
@@ -115,6 +118,7 @@ export const THEMES: ThemeDef[] = [
   {
     id: 'graphic',
     kind: 'photobook',
+    borderless: true,
     name: 'Bold Graphic',
     description: 'A design-shop book: a colour-block cover with a giant title and an illustration, then clean, confident photo pages.',
     colors: { page: '#FFFFFF', chapterPage: '#F7D046', ink: '#1E1B18', muted: '#55504A', accent: '#C2412D', accent2: '#1F6F6B', mat: '#FFFFFF', pattern: '#EEEEEE' },
@@ -143,6 +147,7 @@ export const THEMES: ThemeDef[] = [
   {
     id: 'brag',
     kind: 'photobook',
+    borderless: true,
     name: 'Brag Book',
     description: 'A little book of big photos: every page one photo, edge to edge, like a pocket brag book. Nothing but the pictures.',
     colors: { page: '#FFFFFF', chapterPage: '#111111', ink: '#141414', muted: '#5C5C5C', accent: '#9A9A9A', accent2: '#141414', mat: '#FFFFFF', pattern: '#EEEEEE' },

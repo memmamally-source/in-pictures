@@ -235,7 +235,7 @@ function captionCost(layout: LayoutDef, group: Photo[], order: number[]): number
     const caption = group[pi].caption?.trim() ?? '';
     const hasSlot = captionSlots.has(slot);
     if (layout.captions === 'required' && hasSlot && !caption) cost += 6;
-    if (caption && !hasSlot) cost += 1.2;
+    if (caption && !hasSlot) cost += 2.6; // the caption someone wrote wouldn't show
     if (caption && hasSlot && layout.texts.find((t) => t.photo === slot)?.inFrame && caption.length > 40) cost += 0.8;
     if (caption && hasSlot) cost -= 0.6;
   });
@@ -420,7 +420,10 @@ export function generateAlbum({ project, photos, seed }: GenerateInput): Album {
   sections.forEach((section, si) => {
     let body = section.photos;
     if (chosen.has(section)) {
-      const pick = chapterLayouts[Math.floor(rand() * chapterLayouts.length)];
+      // Photo-book styles open chapters with a photo (a plain title page is the fallback).
+      const choices = theme.borderless ? chapterLayouts.filter((l) => l.photos.length) : chapterLayouts;
+      const pool = choices.length ? choices : chapterLayouts;
+      const pick = pool[Math.floor(rand() * pool.length)];
       const text = { heading: section.title ?? '', date: section.dateLabel ?? '' };
       if (pick.photos.length) {
         const ranked = [...body].sort((x, y) => Number(y.favourite) - Number(x.favourite) || x.order - y.order);

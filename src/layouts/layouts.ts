@@ -272,6 +272,7 @@ export function layoutsFor(theme: ThemeId, kind?: LayoutDef['kind'], photoCount?
     (l) =>
       (!t.singlePhotoPages || l.kind !== 'photos' || (l.photos.length === 1 && !!l.bleed && !l.spread && !l.needsHeading)) &&
       (!t.singlePhotoPages || l.kind !== 'cover' || !!l.bleed) &&
+      (!t.borderless || l.kind === 'chapter' || l.kind === 'closing' || !!l.bleed || !!l.poster || !!l.needsHeading) &&
       (!l.themes || l.themes.includes(theme)) &&
       (!kind || l.kind === kind) &&
       (photoCount === undefined || l.photos.length === photoCount) &&
